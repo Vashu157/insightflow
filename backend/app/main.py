@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import sessions, profiles
+from app.routers import sessions, profiles, analytics, ai, insights
 from app.core.cleanup import cleanup_expired_sessions
 
 @asynccontextmanager
@@ -28,6 +28,9 @@ app.add_middleware(
 
 app.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 app.include_router(profiles.router, tags=["profiles"])
+app.include_router(analytics.router, tags=["analytics"])
+app.include_router(ai.router, tags=["ai"])
+app.include_router(insights.router, tags=["insights"])
 
 @app.get("/")
 def read_root():

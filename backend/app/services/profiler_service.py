@@ -21,6 +21,8 @@ class ProfilerService:
             return {k: ProfilerService._clean_json(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [ProfilerService._clean_json(i) for i in obj]
+        elif hasattr(obj, "model_dump"):
+            return ProfilerService._clean_json(obj.model_dump())
         elif pd.isna(obj):
             return None
         elif isinstance(obj, (np.integer, np.int64)):

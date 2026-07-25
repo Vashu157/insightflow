@@ -6,8 +6,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DATABASE_URL: str
     SESSION_EXPIRY_MINUTES: int = 60
+    GEMINI_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()
