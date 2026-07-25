@@ -101,24 +101,7 @@ class ProfilerService:
                 "sample_values": sample_vals
             }
 
-            if pd.api.types.is_numeric_dtype(series):
-                col_detail["inferred_type"] = "numeric"
-                if not series.dropna().empty:
-                    q1 = series.quantile(0.25)
-                    q3 = series.quantile(0.75)
-                    col_detail["numeric_stats"] = NumericStats(
-                        minimum=float(series.min()),
-                        maximum=float(series.max()),
-                        mean=float(series.mean()),
-                        median=float(series.median()),
-                        std_dev=float(series.std()) if pd.notna(series.std()) else 0.0,
-                        variance=float(series.var()) if pd.notna(series.var()) else 0.0,
-                        q1=float(q1),
-                        q3=float(q3),
-                        iqr=float(q3 - q1)
-                    )
-            
-            elif pd.api.types.is_bool_dtype(series) or (series.dropna().isin([True, False, 0, 1]).all() and unique_vals <= 2):
+            if pd.api.types.is_bool_dtype(series) or (series.dropna().isin([True, False, 0, 1]).all() and unique_vals <= 2):
                 col_detail["inferred_type"] = "boolean"
                 true_c = int((series == True).sum() + (series == 1).sum())
                 false_c = int((series == False).sum() + (series == 0).sum())
@@ -129,6 +112,25 @@ class ProfilerService:
                     true_percentage=round((true_c / valid_c) * 100, 2) if valid_c > 0 else 0,
                     false_percentage=round((false_c / valid_c) * 100, 2) if valid_c > 0 else 0
                 )
+            
+            elif pd.api.types.is_numeric_dtype(series):
+                col_detail["inferred_type"] = "numeric"
+                if not series.dropna().empty:
+                    # Convert to float specifically to avoid numpy boolean issues if any sneaks in
+                    float_series = series.astype(float)
+                    q1 = float_series.quantile(0.25)
+                    q3 = float_series.quantile(0.75)
+                    col_detail["numeric_stats"] = NumericStats(
+                        minimum=float(float_series.min()),
+                        maximum=float(float_series.max()),
+                        mean=float(float_series.mean()),
+                        median=float(float_series.median()),
+                        std_dev=float(float_series.std()) if pd.notna(float_series.std()) else 0.0,
+                        variance=float(float_series.var()) if pd.notna(float_series.var()) else 0.0,
+                        q1=float(q1),
+                        q3=float(q3),
+                        iqr=float(q3 - q1)
+                    )
             
             elif pd.api.types.is_datetime64_any_dtype(series):
                 col_detail["inferred_type"] = "date"

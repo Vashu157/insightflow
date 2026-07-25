@@ -41,7 +41,7 @@ export default function DatasetPreview({ sessionId }: { sessionId: string }) {
           <Table>
             <TableHeader className="bg-slate-800/50">
               <TableRow className="border-slate-700 hover:bg-transparent">
-                {preview.columns.map((col, idx) => (
+                {preview.columns.map((col: string, idx: number) => (
                   <TableHead key={idx} className="whitespace-nowrap text-slate-300">
                     <div className="flex flex-col">
                       <span className="font-semibold">{col}</span>
@@ -52,9 +52,9 @@ export default function DatasetPreview({ sessionId }: { sessionId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {preview.data.map((row, rowIdx) => (
+              {preview.data.map((row: any, rowIdx: number) => (
                 <TableRow key={rowIdx} className="border-slate-800 hover:bg-slate-800/30 transition-colors">
-                  {preview.columns.map((col, colIdx) => (
+                  {preview.columns.map((col: string, colIdx: number) => (
                     <TableCell key={colIdx} className="whitespace-nowrap text-slate-400 max-w-[200px] truncate">
                       {row[col] !== null ? String(row[col]) : ""}
                     </TableCell>
