@@ -2,10 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies for postgres client etc.
-RUN apt-get update \
-    && apt-get install -y gcc libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# System dependencies removed to avoid network issues. psycopg2-binary will use precompiled wheels.
 
 # Copy requirements and install
 COPY requirements.txt .

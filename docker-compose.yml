@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -27,6 +25,8 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-insightflow_user}:${POSTGRES_PASSWORD:-insightflow_password}@postgres:5432/${POSTGRES_DB:-insightflow_db}
     depends_on:
