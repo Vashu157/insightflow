@@ -31,7 +31,7 @@ def get_dataset_columns(session_id: str, db: Session = Depends(get_db)) -> Any:
         ))
     return summaries
 
-@router.get("/columns/{session_id}/{column_name}", response_model=ColumnDetails)
+@router.get("/sessions/{session_id}/columns/{column_name}", response_model=ColumnDetails)
 def get_column_details(session_id: str, column_name: str, db: Session = Depends(get_db)) -> Any:
     """Get detailed profiling statistics for a specific column."""
     return ProfilerService.get_column_profile(db, session_id, column_name)

@@ -57,9 +57,12 @@ class SessionService:
             
             return db_session
             
+        except HTTPException:
+            storage.delete(session_id)
+            raise
         except Exception as e:
             storage.delete(session_id)
-            raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
     @staticmethod
     def get_session(db: Session, session_id: str) -> SessionResponse:

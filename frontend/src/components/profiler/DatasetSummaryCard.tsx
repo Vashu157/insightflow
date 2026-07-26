@@ -11,7 +11,6 @@ export default function DatasetSummaryCard({ summary }: { summary: any }) {
     { label: "Memory Usage", value: `${summary.memory_usage_mb} MB`, icon: HardDrive, color: "text-purple-400" },
     { label: "Missing Values", value: `${summary.missing_values.toLocaleString()} (${summary.missing_percentage}%)`, icon: AlertTriangle, color: "text-amber-400" },
     { label: "Duplicate Rows", value: summary.duplicate_rows.toLocaleString(), icon: Files, color: "text-rose-400" },
-    { label: "Uploaded", value: formatDistanceToNow(new Date(summary.upload_time), { addSuffix: true }), icon: Clock, color: "text-emerald-400" },
   ];
 
   return (

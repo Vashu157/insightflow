@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Depends
-from typing import Dict, Any
-
+from fastapi import APIRouter
 from app.schemas.insights import BusinessReportResponse
 from app.ai.business_analyst import BusinessAnalyst
 
@@ -27,9 +25,3 @@ def refresh_insights(session_id: str):
         generated_at=data["generated_at"],
         is_cached=data["is_cached"]
     )
-
-@router.get("/sessions/{session_id}/summary")
-def get_executive_summary(session_id: str) -> Dict[str, Any]:
-    """Retrieve only the executive summary from the report."""
-    data = BusinessAnalyst.generate_report(session_id, force_refresh=False)
-    return data["report"]["executive_summary"]

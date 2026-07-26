@@ -5,10 +5,35 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Copy, Check, Clock, Database } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
-export default function ChatResults({ message }: { message: any }) {
+export default function ChatResults({ message, sessionId }: { message: any, sessionId: string }) {
   const [showSql, setShowSql] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const handleExport = async () => {
+    if (!message.sql_query) return;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    // Use fetch to POST the SQL query and receive a file download
+    try {
+      const res = await fetch(`${baseUrl}/sessions/${sessionId}/export/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql_query: message.sql_query, format: 'csv' }),
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'query_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Silently fail — the button is a convenience feature
+    }
+  };
 
   if (!message || message.role !== 'ai') return null;
 
@@ -77,7 +102,13 @@ export default function ChatResults({ message }: { message: any }) {
 
       {/* Data Table Section */}
       {hasData && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden flex-1">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 flex-1 flex flex-col min-h-[300px]">
+          <div className="flex justify-between items-center p-3 border-b border-slate-800">
+            <h4 className="text-sm font-medium text-slate-300">Query Results</h4>
+            <Button variant="outline" size="sm" onClick={handleExport} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+              <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+          </div>
           <div className="overflow-auto max-h-[500px]">
             <Table>
               <TableHeader className="bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">

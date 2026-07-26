@@ -27,21 +27,7 @@ export const useSession = (sessionId: string | null) => {
       return data;
     },
     enabled: !!sessionId,
-    refetchInterval: 30000, // Polling to check status/expiry
-  });
-};
-
-export const useDatasetPreview = (sessionId: string | null, limit: number = 20, offset: number = 0) => {
-  return useQuery({
-    queryKey: ["datasetPreview", sessionId, limit, offset],
-    queryFn: async () => {
-      if (!sessionId) return null;
-      const { data } = await api.get(`/sessions/${sessionId}/preview`, {
-        params: { limit, offset }
-      });
-      return data;
-    },
-    enabled: !!sessionId,
+    refetchInterval: 30000, // Poll every 30s to keep expiry time current
   });
 };
 
@@ -53,8 +39,9 @@ export const useDeleteSession = () => {
     },
     onSuccess: (_, sessionId) => {
       queryClient.removeQueries({ queryKey: ["session", sessionId] });
-      queryClient.removeQueries({ queryKey: ["datasetPreview", sessionId] });
       queryClient.removeQueries({ queryKey: ["datasetProfile", sessionId] });
+      queryClient.removeQueries({ queryKey: ["columnSummaries", sessionId] });
+      queryClient.removeQueries({ queryKey: ["dashboardSummary", sessionId] });
     },
   });
 };
@@ -68,7 +55,7 @@ export const useDatasetProfile = (sessionId: string | null) => {
       return data;
     },
     enabled: !!sessionId,
-    staleTime: Infinity, // Profiles are static for the session
+    staleTime: Infinity, // Profiles are static for the session lifetime
   });
 };
 
@@ -90,7 +77,7 @@ export const useColumnDetails = (sessionId: string | null, columnName: string | 
     queryKey: ["columnDetails", sessionId, columnName],
     queryFn: async () => {
       if (!sessionId || !columnName) return null;
-      const { data } = await api.get(`/columns/${sessionId}/${encodeURIComponent(columnName)}`);
+      const { data } = await api.get(`/sessions/${sessionId}/columns/${encodeURIComponent(columnName)}`);
       return data;
     },
     enabled: !!sessionId && !!columnName,

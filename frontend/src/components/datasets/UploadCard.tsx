@@ -17,12 +17,15 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
       const file = acceptedFiles[0];
       if (!file) return;
 
-      const validTypes = ["text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"];
-      if (!validTypes.includes(file.type)) {
+      // Windows browsers can report empty or non-standard MIME types for CSV files.
+      // We validate by extension as a reliable fallback.
+      const validExtensions = ['.csv', '.xlsx', '.xls'];
+      const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!hasValidExtension) {
         toast.error("Invalid file type. Please upload a CSV or Excel file.");
         return;
       }
-      
+
       if (file.size > 50 * 1024 * 1024) { // 50MB limit
         toast.error("File is too large. Maximum size is 50MB.");
         return;

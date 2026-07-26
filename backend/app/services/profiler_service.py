@@ -148,8 +148,8 @@ class ProfilerService:
             else:
                 # Try converting to datetime first
                 try:
-                    dt_series = pd.to_datetime(series, errors='ignore')
-                    if pd.api.types.is_datetime64_any_dtype(dt_series):
+                    dt_series = pd.to_datetime(series, errors='coerce', format='mixed')
+                    if pd.api.types.is_datetime64_any_dtype(dt_series) and dt_series.notna().sum() > 0:
                         col_detail["inferred_type"] = "date"
                         if not dt_series.dropna().empty:
                             min_dt = dt_series.min()

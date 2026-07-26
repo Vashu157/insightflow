@@ -20,3 +20,7 @@ class Session(Base):
     upload_time = Column(DateTime, default=datetime.utcnow)
     last_accessed = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime)
+    
+    # Sharing functionality
+    is_shared = Column(Integer, default=0) # using Integer as boolean for cross-db compatibility
+    share_token = Column(String, unique=True, index=True, nullable=True)

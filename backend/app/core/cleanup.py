@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.database.database import SessionLocal
 from app.models.session import Session as SessionModel
 from app.storage.local import LocalStorageService
+from app.core.logging import logger
 
-logger = logging.getLogger(__name__)
 storage = LocalStorageService(base_path="uploads")
 
 async def cleanup_expired_sessions():
