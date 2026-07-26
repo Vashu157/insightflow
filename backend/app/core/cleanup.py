@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.database.database import SessionLocal
 from app.models.session import Session as SessionModel
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 from app.core.logging import logger
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 async def cleanup_expired_sessions():
     """Background task that runs periodically to remove expired sessions."""

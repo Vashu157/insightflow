@@ -11,13 +11,13 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.session import Session as SessionModel
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 from app.schemas.ai import ChatMessage
 from app.ai.prompt_builder import PromptBuilder
 from app.ai.sql_generator import SQLGenerator
 from app.ai.sql_validator import SQLValidator
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 class ChatService:
     
@@ -41,7 +41,7 @@ class ChatService:
 
     @staticmethod
     def get_history(session_id: str) -> List[ChatMessage]:
-        history_path = storage.read(session_id, "chat_history.json")
+        history_path = storage.get_cache_path(session_id, "chat_history.json")
         if os.path.exists(history_path):
             try:
                 with open(history_path, "r") as f:
@@ -53,7 +53,7 @@ class ChatService:
 
     @staticmethod
     def save_history(session_id: str, messages: List[ChatMessage]):
-        history_path = storage.read(session_id, "chat_history.json")
+        history_path = storage.get_cache_path(session_id, "chat_history.json")
         try:
             with open(history_path, "w") as f:
                 json.dump({"messages": [m.model_dump() for m in messages]}, f, default=str)

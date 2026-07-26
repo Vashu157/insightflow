@@ -5,10 +5,10 @@ from google import genai
 from pydantic import ValidationError
 from fastapi import HTTPException
 from app.core.config import settings
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 from app.ai.report_models import BusinessReport
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 class BusinessAnalyst:
     @classmethod
@@ -20,7 +20,7 @@ class BusinessAnalyst:
 
     @classmethod
     def get_cached_report(cls, session_id: str):
-        cache_path = storage.read(session_id, "insights_report.json")
+        cache_path = storage.get_cache_path(session_id, "insights_report.json")
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, "r") as f:
@@ -32,7 +32,7 @@ class BusinessAnalyst:
 
     @classmethod
     def save_report(cls, session_id: str, report_dict: dict):
-        cache_path = storage.read(session_id, "insights_report.json")
+        cache_path = storage.get_cache_path(session_id, "insights_report.json")
         try:
             with open(cache_path, "w") as f:
                 json.dump(report_dict, f)
@@ -46,7 +46,7 @@ class BusinessAnalyst:
             if cached:
                 return {"report": cached["report"], "generated_at": cached["generated_at"], "is_cached": True}
 
-        profile_path = storage.read(session_id, "profile.json")
+        profile_path = storage.get_cache_path(session_id, "profile.json")
         if not os.path.exists(profile_path):
             raise HTTPException(status_code=400, detail="Data profile not found. Please ensure the dataset was successfully profiled.")
         

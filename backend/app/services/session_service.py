@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.models.session import Session as SessionModel
 from app.schemas.session import SessionResponse, DatasetPreviewResponse
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 from app.core.config import settings
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 class SessionService:
     @staticmethod
@@ -61,6 +61,8 @@ class SessionService:
             storage.delete(session_id)
             raise
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             storage.delete(session_id)
             raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 

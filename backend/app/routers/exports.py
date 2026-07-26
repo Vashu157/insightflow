@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.database.database import get_db
 from app.models.session import Session
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 
 router = APIRouter()
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 
 def _load_dataframe(db_session, file_path: str) -> pd.DataFrame:

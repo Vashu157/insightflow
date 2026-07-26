@@ -9,9 +9,9 @@ from datetime import datetime
 
 from app.models.session import Session as SessionModel
 from app.schemas.profile import DatasetProfile, DatasetSummary, ColumnDetails, NumericStats, CategoricalStats, DateStats, BooleanStats
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 class ProfilerService:
     @staticmethod
@@ -41,7 +41,7 @@ class ProfilerService:
         if not db_session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        cache_path = storage.read(session_id, "profile.json")
+        cache_path = storage.get_cache_path(session_id, "profile.json")
         
         # Check cache
         if os.path.exists(cache_path):

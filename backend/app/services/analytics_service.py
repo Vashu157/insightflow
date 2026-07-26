@@ -9,9 +9,9 @@ from datetime import datetime
 
 from app.models.session import Session as SessionModel
 from app.schemas.analytics import FilterRule, ChartConfig, DashboardSummary, AggregationRule
-from app.storage.local import LocalStorageService
+from app.storage.s3_storage import S3StorageService
 
-storage = LocalStorageService(base_path="uploads")
+storage = S3StorageService()
 
 class AnalyticsService:
     @staticmethod
@@ -109,7 +109,7 @@ class AnalyticsService:
 
     @staticmethod
     def get_charts(session_id: str) -> List[ChartConfig]:
-        cache_path = storage.read(session_id, "dashboard.json")
+        cache_path = storage.get_cache_path(session_id, "dashboard.json")
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, "r") as f:
@@ -121,7 +121,7 @@ class AnalyticsService:
 
     @staticmethod
     def save_charts(session_id: str, charts: List[ChartConfig]):
-        cache_path = storage.read(session_id, "dashboard.json")
+        cache_path = storage.get_cache_path(session_id, "dashboard.json")
         try:
             with open(cache_path, "w") as f:
                 json.dump({"charts": [c.model_dump() for c in charts]}, f)
