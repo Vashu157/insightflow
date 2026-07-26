@@ -95,9 +95,7 @@ export default function DatasetWorkspacePage() {
     saveCharts(newCharts);
   };
 
-  const expiresAt = session?.expires_at ? new Date(session.expires_at) : null;
-  const isExpired = expiresAt && (expiresAt.getTime() <= Date.now());
-  const isExpiringSoon = expiresAt && !isExpired && (expiresAt.getTime() - Date.now()) < 15 * 60 * 1000;
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
@@ -117,12 +115,7 @@ export default function DatasetWorkspacePage() {
           </div>
 
           <div className="ml-auto flex items-center gap-4">
-            {expiresAt && (
-              <div className={`hidden sm:flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border ${isExpired ? 'text-rose-400 border-rose-500/30 bg-rose-500/10' : isExpiringSoon ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-slate-500 border-slate-700'}`}>
-                <Clock className="h-3 w-3" />
-                {isExpired ? 'Expired' : 'Expires'} {formatDistanceToNow(expiresAt, { addSuffix: true })}
-              </div>
-            )}
+
             <Link href="/datasets" className="text-sm font-medium text-slate-400 hover:text-white transition-colors flex items-center gap-1">
               <ArrowLeft className="h-4 w-4" /> New Dataset
             </Link>
