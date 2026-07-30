@@ -17,10 +17,12 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
   const uploadDataset = useUploadDataset();
   const { jobStatus } = useJobWebSocket(activeSessionId);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fakeProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
     };
   }, []);
 
@@ -45,7 +47,8 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
 
       // Simulate progress for UI purposes before the mutation finishes
       setProgress(10);
-      const interval = setInterval(() => {
+      if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
+      fakeProgressIntervalRef.current = setInterval(() => {
         setProgress((p) => (p >= 90 ? 90 : p + 10));
       }, 200);
 
@@ -69,11 +72,12 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
                   setTimeout(() => onUploadSuccess(data.id), 500);
                 } else if (jobRes.data.status === "FAILED") {
                   if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                  if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
                   toast.error(`Processing failed: ${jobRes.data.error_message || "Unknown error"}`);
                   setProgress(0);
                 } else {
                   // Fallback progress updates if WS misses
-                  if (jobRes.data.progress) {
+                  if (jobRes.data.progress !== undefined && jobRes.data.progress !== null) {
                     setProgress(jobRes.data.progress);
                   }
                 }
@@ -86,11 +90,13 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
             // We can attach it to a ref or just let it naturally clear
             
           } catch (err) {
+             if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
              toast.error("Failed to start profiling job.");
              setProgress(0);
           }
         },
         onError: (err: any) => {
+          if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
           setProgress(0);
           toast.error(err.response?.data?.detail || "Failed to upload dataset.");
         },
@@ -116,10 +122,12 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
       console.log("[UploadCard] Current status from payload:", jobStatus.payload.status);
       if (jobStatus.payload.status === "COMPLETED") {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
         toast.success("Dataset processed successfully!");
         setTimeout(() => onUploadSuccess(activeSessionId!), 500);
       } else if (jobStatus.payload.status === "FAILED") {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
         toast.error(`Processing failed: ${jobStatus.payload.error_message}`);
         setProgress(0);
       }
