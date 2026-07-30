@@ -3,10 +3,10 @@ import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from app.database.database import SessionLocal
-from app.models.session import Session as SessionModel
-from app.storage.s3_storage import S3StorageService
-from app.core.logging import logger
+from app.domains.shared.database import SessionLocal
+from app.domains.shared.models import Session as SessionModel
+from app.domains.shared.s3_storage import S3StorageService
+from app.domains.shared.logging import logger
 
 storage = S3StorageService()
 
