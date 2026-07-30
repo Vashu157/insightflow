@@ -53,6 +53,11 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-insightflow_user}:${POSTGRES_PASSWORD:-insightflow_password}@postgres:5432/${POSTGRES_DB:-insightflow_db}
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy

@@ -3,7 +3,7 @@ import json
 import uuid
 import numpy as np
 import pandas as pd
-from typing import Any, Dict
+from typing import Any, Dict, List, Callable
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime

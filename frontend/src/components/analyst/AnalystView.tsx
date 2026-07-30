@@ -1,17 +1,44 @@
 "use client";
 
 import { useInsights, useRefreshInsights } from "@/hooks/useInsights";
+import { useJobWebSocket } from "@/hooks/useWebSocket";
 import { Loader2, RefreshCw, FileText, Target, AlertTriangle, Lightbulb, Share2, Download, Copy, CheckCircle, AlertCircle } from "lucide-react";
 import InsightCard from "./InsightCard";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
 export default function AnalystView({ sessionId }: { sessionId: string }) {
   const { data, isLoading, error, refetch } = useInsights(sessionId);
-  const { mutate: refresh, isPending: isRefreshing } = useRefreshInsights(sessionId);
+  const { mutate: refresh } = useRefreshInsights(sessionId);
   const [isSharing, setIsSharing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState<string>("Started");
+  
+  const { jobStatus } = useJobWebSocket(sessionId);
+
+  // Listen to WebSocket updates
+  useEffect(() => {
+    if (jobStatus?.payload && jobStatus.event_type.startsWith("report.")) {
+      if (jobStatus.payload.progress !== undefined) {
+        setProgress(jobStatus.payload.progress);
+      }
+      if (jobStatus.payload.current_stage) {
+        setCurrentStage(jobStatus.payload.current_stage);
+      }
+      
+      if (jobStatus.payload.status === "COMPLETED" && jobStatus.event_type === "report.completed") {
+        toast.success("Report generated successfully!");
+        setIsRefreshing(false);
+        refetch(); // Refetch the updated data!
+      } else if (jobStatus.payload.status === "FAILED") {
+        toast.error(`Processing failed: ${jobStatus.payload.error_message}`);
+        setIsRefreshing(false);
+      }
+    }
+  }, [jobStatus, refetch]);
 
   const handleShare = async () => {
     setIsSharing(true);
@@ -33,18 +60,31 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
   };
 
   const handleRefresh = () => {
+    setIsRefreshing(true);
+    setProgress(0);
+    setCurrentStage("Queued");
     refresh(undefined, {
-      onSuccess: () => toast.success("Report regenerated successfully."),
-      onError: () => toast.error("Failed to regenerate report. Please try again."),
+      onError: () => {
+        setIsRefreshing(false);
+        toast.error("Failed to queue report generation.");
+      },
     });
   };
 
-  if (isLoading) {
+  if (isLoading || isRefreshing) {
     return (
       <div className="flex flex-col items-center justify-center h-[600px] text-slate-400 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-        <p className="text-lg font-medium">Analyzing your dataset...</p>
-        <p className="text-sm opacity-70">The AI is generating your business report. This takes 15–30 seconds.</p>
+        <p className="text-lg font-medium">{currentStage}...</p>
+        <p className="text-sm opacity-70">The AI is generating your business report. Please wait.</p>
+        <div className="w-64 max-w-sm mt-4">
+          <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-indigo-500 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import os
 import json
 import duckdb
 import pandas as pd
+from typing import Dict, Any, List, Optional
 from io import BytesIO
 from fastapi import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse

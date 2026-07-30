@@ -7,6 +7,8 @@ from app.domains.session.schemas import SessionResponse, DatasetPreviewResponse
 from app.domains.session.interfaces import ISessionService
 from app.domains.session.dependencies import get_session_service
 
+from app.core.security import validate_upload_file
+
 session_router = APIRouter()
 share_router = APIRouter()
 
@@ -16,6 +18,7 @@ def upload_dataset(
     db: Session = Depends(get_db),
     session_service: ISessionService = Depends(get_session_service)
 ) -> Any:
+    validate_upload_file(file)
     return session_service.process_upload(db, file)
 
 @session_router.get("/{session_id}", response_model=SessionResponse)

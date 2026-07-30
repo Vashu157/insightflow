@@ -4,7 +4,7 @@ import uuid
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from google import genai
@@ -17,6 +17,9 @@ from app.domains.shared.interfaces import StorageService
 from app.domains.reports.interfaces import IReportService
 from app.domains.shared.logging import logger, current_session_id
 from app.core.config import settings
+from app.core.circuit_breaker import gemini_circuit_breaker
+from app.domains.shared.metrics import GEMINI_API_DURATION_SECONDS
+import time
 
 class ReportServiceImpl(IReportService):
     def __init__(self, storage: StorageService):
@@ -266,15 +269,26 @@ Respond exactly matching the required JSON schema.
                 progress_callback(50)
             
             client = self._get_client()
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json",
-                    "response_schema": BusinessReport,
-                    "temperature": 0.2
-                }
-            )
+            
+            def _call_gemini():
+                start_t = time.time()
+                try:
+                    res = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={
+                            "response_mime_type": "application/json",
+                            "response_schema": BusinessReport,
+                            "temperature": 0.2
+                        }
+                    )
+                    GEMINI_API_DURATION_SECONDS.labels(operation="generate_report", status="success").observe(time.time() - start_t)
+                    return res
+                except Exception as g_err:
+                    GEMINI_API_DURATION_SECONDS.labels(operation="generate_report", status="error").observe(time.time() - start_t)
+                    raise g_err
+
+            response = gemini_circuit_breaker.call(_call_gemini)
             
             report_json = response.text
             report_dict = json.loads(report_json)

@@ -14,15 +14,10 @@ export const useInsights = (sessionId: string) => {
 };
 
 export const useRefreshInsights = (sessionId: string) => {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: async () => {
-      const { data } = await api.post(`/sessions/${sessionId}/insights/refresh`);
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["insights", sessionId], data);
+      const { data } = await api.post(`/jobs/report/${sessionId}`);
+      return data; // Returns JobCreateResponse
     },
   });
 };
