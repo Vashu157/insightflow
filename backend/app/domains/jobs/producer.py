@@ -1,7 +1,7 @@
 import json
 import logging
 from aiokafka import AIOKafkaProducer
-from app.core.config import settings
+from app.core.config import settings, get_kafka_config
 from app.domains.jobs.events import EventSchema
 
 logger = logging.getLogger(__name__)
@@ -12,13 +12,15 @@ class KafkaProducerClient:
 
     async def start(self):
         try:
+            kafka_config = get_kafka_config()
             self.producer = AIOKafkaProducer(
-                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                **kafka_config
             )
             await self.producer.start()
             logger.info("Kafka Producer started successfully.")
         except Exception as e:
+
             logger.error(f"Failed to start Kafka Producer: {e}")
             self.producer = None
 

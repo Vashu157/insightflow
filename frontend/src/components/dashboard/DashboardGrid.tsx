@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, GripVertical, BarChart3, Loader2 } from "lucide-react";
 import { useChartData } from "@/hooks/useAnalytics";
 import html2canvas from "html2canvas";
 import {
@@ -50,8 +50,24 @@ const ChartRenderer = ({ sessionId, config, globalFilters }: { sessionId: string
     link.click();
   };
 
-  if (isLoading) return <div className="flex h-full items-center justify-center text-slate-500">Loading chart...</div>;
-  if (!data || data.data?.length === 0 || data.length === 0) return <div className="flex h-full items-center justify-center text-slate-500">No data available</div>;
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-slate-500 gap-2 bg-slate-900/60 rounded-2xl border border-slate-800">
+        <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+        <span className="text-xs">Loading chart data...</span>
+      </div>
+    );
+  }
+
+  if (!data || data.data?.length === 0 || data.length === 0) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-slate-500 gap-1.5 bg-slate-900/60 rounded-2xl border border-slate-800 p-4">
+        <BarChart3 className="h-6 w-6 text-slate-600 mb-1" />
+        <span className="text-xs font-medium text-slate-400">No data available</span>
+        <span className="text-[11px] text-slate-600 text-center">Try relaxing your filter criteria</span>
+      </div>
+    );
+  }
 
   const chartData: any[] = Array.isArray(data) ? data : (data.data || []);
 
@@ -65,65 +81,73 @@ const ChartRenderer = ({ sessionId, config, globalFilters }: { sessionId: string
       case 'Histogram':
         return (
           <BarChart data={chartData}>
-            <XAxis dataKey={xKey} stroke="#64748b" fontSize={12} tickFormatter={(val: string) => typeof val === 'string' && val.length > 10 ? val.substring(0, 10) + '...' : val} />
-            <YAxis stroke="#64748b" fontSize={12} />
-            <Tooltip cursor={{ fill: '#1e293b' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} />
+            <XAxis dataKey={xKey} stroke="#64748b" fontSize={11} tickFormatter={(val: string) => typeof val === 'string' && val.length > 10 ? val.substring(0, 10) + '...' : val} />
+            <YAxis stroke="#64748b" fontSize={11} />
+            <Tooltip cursor={{ fill: '#1e293b' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }} />
             <Bar dataKey={yKey} fill="#6366f1" radius={[4, 4, 0, 0]} />
           </BarChart>
         );
       case 'Line':
         return (
           <LineChart data={chartData}>
-            <XAxis dataKey={xKey} stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} />
-            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} />
-            <Line type="monotone" dataKey={yKey} stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+            <XAxis dataKey={xKey} stroke="#64748b" fontSize={11} />
+            <YAxis stroke="#64748b" fontSize={11} />
+            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }} />
+            <Line type="monotone" dataKey={yKey} stroke="#ec4899" strokeWidth={2.5} dot={{ r: 3.5, fill: '#ec4899' }} />
           </LineChart>
         );
       case 'Area':
         return (
           <AreaChart data={chartData}>
-            <XAxis dataKey={xKey} stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} />
-            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} />
-            <Area type="monotone" dataKey={yKey} stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+            <XAxis dataKey={xKey} stroke="#64748b" fontSize={11} />
+            <YAxis stroke="#64748b" fontSize={11} />
+            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }} />
+            <Area type="monotone" dataKey={yKey} stroke="#10b981" fill="#10b981" fillOpacity={0.25} strokeWidth={2} />
           </AreaChart>
         );
       case 'Pie':
         return (
           <PieChart>
-            <Pie data={chartData} dataKey={yKey} nameKey={xKey} cx="50%" cy="50%" outerRadius="80%" label>
+            <Pie data={chartData} dataKey={yKey} nameKey={xKey} cx="50%" cy="50%" outerRadius="75%" label>
               {chartData.map((_: any, index: number) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} />
-            <Legend />
+            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }} />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
           </PieChart>
         );
       case 'Scatter':
         return (
           <ScatterChart>
-            <XAxis type="number" dataKey={config.x_column} name={config.x_column} stroke="#64748b" fontSize={12} />
-            <YAxis type="number" dataKey={config.y_column} name={config.y_column} stroke="#64748b" fontSize={12} />
-            <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} />
+            <XAxis type="number" dataKey={config.x_column} name={config.x_column} stroke="#64748b" fontSize={11} />
+            <YAxis type="number" dataKey={config.y_column} name={config.y_column} stroke="#64748b" fontSize={11} />
+            <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc' }} />
             <Scatter data={chartData} fill="#f97316" />
           </ScatterChart>
         );
       default:
-        return <div className="flex h-full items-center justify-center text-rose-400">Unsupported chart type</div>;
+        return <div className="flex h-full items-center justify-center text-rose-400 text-xs">Unsupported chart type</div>;
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900/80 rounded-xl border border-slate-800 shadow-xl overflow-hidden" ref={chartRef}>
-      <div className="flex justify-between items-center p-3 border-b border-slate-800/50 bg-slate-900 cursor-move chart-drag-handle">
-        <h4 className="text-sm font-semibold text-slate-200">{config.title}</h4>
-        <button onMouseDown={(e) => e.stopPropagation()} onClick={downloadImage} className="text-slate-500 hover:text-indigo-400" title="Export PNG">
-          <Download className="h-4 w-4" />
+    <div className="flex flex-col h-full bg-slate-900/90 rounded-2xl border border-slate-800 shadow-xl overflow-hidden backdrop-blur-md" ref={chartRef}>
+      <div className="flex justify-between items-center px-4 py-2.5 border-b border-slate-800/80 bg-slate-950/60 cursor-move chart-drag-handle group/header">
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-4 w-4 text-slate-600 group-hover/header:text-slate-400 transition-colors" />
+          <h4 className="text-xs font-semibold text-slate-200 truncate max-w-[200px]">{config.title}</h4>
+        </div>
+        <button 
+          onMouseDown={(e) => e.stopPropagation()} 
+          onClick={downloadImage} 
+          className="text-slate-500 hover:text-indigo-400 p-1 transition-colors" 
+          title="Export PNG"
+        >
+          <Download className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="flex-1 p-2 min-h-0">
+      <div className="flex-1 p-3 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
@@ -131,6 +155,8 @@ const ChartRenderer = ({ sessionId, config, globalFilters }: { sessionId: string
     </div>
   );
 };
+
+const ReactGridLayout = GridLayout as any;
 
 export default function DashboardGrid({
   sessionId,
@@ -143,7 +169,20 @@ export default function DashboardGrid({
   onChartsChange: (charts: ChartConfig[]) => void;
   globalFilters: any[];
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1200);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setWidth(entries[0].contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const handleLayoutChange = (layout: any) => {
     const layoutArray: LayoutItem[] = Array.isArray(layout) ? layout : [];
     const updatedCharts = charts.map(chart => {
@@ -162,16 +201,14 @@ export default function DashboardGrid({
 
   if (!charts || charts.length === 0) {
     return (
-      <div className="h-full min-h-[400px] flex flex-col items-center justify-center gap-4 border-2 border-dashed border-slate-800 rounded-xl text-center p-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-800/60 border border-slate-700">
-          <svg className="h-8 w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-          </svg>
+      <div className="h-full min-h-[400px] flex flex-col items-center justify-center gap-4 border-2 border-dashed border-slate-800/80 bg-slate-950/20 rounded-2xl text-center p-8">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 shadow-inner">
+          <BarChart3 className="h-8 w-8 text-indigo-400" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-slate-300 mb-1">No charts yet</h3>
-          <p className="text-sm text-slate-500 max-w-xs">
-            Click the <span className="text-indigo-400 font-medium">Add Chart</span> button above to create your first visualization.
+          <h3 className="text-base font-semibold text-slate-200 mb-1">No charts added yet</h3>
+          <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+            Click an AI-recommended chart above or use <span className="text-indigo-400 font-medium">Build Custom Chart</span> to create your first visualization.
           </p>
         </div>
       </div>
@@ -180,32 +217,33 @@ export default function DashboardGrid({
 
   const layout: LayoutItem[] = charts.map(c => ({ i: c.id, x: c.x, y: c.y, w: c.w, h: c.h, minW: 3, minH: 2 } as LayoutItem));
 
-  const ReactGridLayout = GridLayout as any;
-
   return (
-    <ReactGridLayout
-      className="layout"
-      layout={layout as any}
-      cols={12}
-      rowHeight={100}
-      width={1200}
-      onLayoutChange={handleLayoutChange}
-      draggableHandle=".chart-drag-handle"
-      isResizable={true}
-    >
-      {charts.map(chart => (
-        <div key={chart.id} className="relative group">
-          <ChartRenderer sessionId={sessionId} config={chart} globalFilters={globalFilters} />
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => removeChart(chart.id)}
-            className="absolute top-3 right-10 text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-            title="Remove Chart"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      ))}
-    </ReactGridLayout>
+    <div ref={containerRef} className="w-full">
+      <ReactGridLayout
+        className="layout"
+        layout={layout as any}
+        cols={12}
+        rowHeight={100}
+        width={width}
+        onLayoutChange={handleLayoutChange}
+        draggableHandle=".chart-drag-handle"
+        isResizable={true}
+      >
+        {charts.map(chart => (
+          <div key={chart.id} className="relative group">
+            <ChartRenderer sessionId={sessionId} config={chart} globalFilters={globalFilters} />
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => removeChart(chart.id)}
+              className="absolute top-2.5 right-9 text-slate-500 hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              title="Remove Chart"
+              aria-label={`Remove ${chart.title}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </ReactGridLayout>
+    </div>
   );
 }

@@ -12,7 +12,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.limiter import limiter
 
-from app.core.config import settings
+from app.core.config import settings, get_kafka_config
 from app.core.cleanup import cleanup_expired_sessions
 from app.domains.shared.logging import (
     logger, current_request_id, current_correlation_id
@@ -37,15 +37,17 @@ from aiokafka import AIOKafkaConsumer
 async def consume_job_updates():
     """Background task to consume job.updates and broadcast to WebSockets."""
     group_id = f"insightflow-ws-gateway-{uuid.uuid4()}"
+    kafka_config = get_kafka_config()
     consumer = AIOKafkaConsumer(
         "job.updates",
-        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
         group_id=group_id,
         auto_offset_reset="latest",
-        value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+        value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+        **kafka_config
     )
     try:
         await consumer.start()
+
         logger.info(f"WebSocket Gateway Kafka Consumer started on topic 'job.updates' (Group: {group_id})")
         async for msg in consumer:
             event = msg.value
@@ -116,11 +118,7 @@ async def log_and_measure_requests(request: Request, call_next):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:3001", 
-        "https://insightflow-beryl.vercel.app"
-    ],
+    allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

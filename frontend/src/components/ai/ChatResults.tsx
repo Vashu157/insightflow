@@ -31,7 +31,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // Silently fail — the button is a convenience feature
+      // Silently fail; the button is a convenience feature.
     }
   };
 
@@ -59,7 +59,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
 
       {/* SQL Query Section */}
       {message.sql_query && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 overflow-hidden shadow-sm">
           <div 
             className="flex items-center justify-between p-3 bg-slate-800/50 cursor-pointer hover:bg-slate-800 transition-colors"
             onClick={() => setShowSql(!showSql)}
@@ -92,6 +92,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
                 onClick={handleCopy}
                 className="absolute top-3 right-3 p-1.5 rounded-md bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
                 title="Copy SQL"
+                aria-label="Copy generated SQL"
               >
                 {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
               </button>
@@ -102,7 +103,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
 
       {/* Data Table Section */}
       {hasData && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 flex-1 flex flex-col min-h-[300px]">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 flex-1 flex flex-col min-h-[300px] overflow-hidden shadow-sm">
           <div className="flex justify-between items-center p-3 border-b border-slate-800">
             <h4 className="text-sm font-medium text-slate-300">Query Results</h4>
             <Button variant="outline" size="sm" onClick={handleExport} className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
@@ -122,7 +123,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
               </TableHeader>
               <TableBody>
                 {message.results.data.map((row: any, rowIdx: number) => (
-                  <TableRow key={rowIdx} className="border-slate-800 hover:bg-slate-800/30">
+                  <TableRow key={rowIdx} className="border-slate-800 even:bg-slate-950/30 hover:bg-slate-800/40 transition-colors">
                     {message.results.columns.map((col: string, colIdx: number) => (
                       <TableCell key={colIdx} className="whitespace-nowrap text-slate-400 max-w-[200px] truncate text-sm">
                         {row[col] !== null ? String(row[col]) : ""}

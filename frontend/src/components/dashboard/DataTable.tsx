@@ -39,17 +39,18 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
 
   if (isLoading) {
     return (
-      <div className="h-64 flex items-center justify-center gap-3 text-slate-500">
-        <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-        <span className="text-sm">Loading table data...</span>
+      <div className="h-64 flex flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+        <span className="text-sm font-medium">Loading dataset records...</span>
       </div>
     );
   }
 
   if (isError || !data || !data.data) {
     return (
-      <div className="h-64 flex items-center justify-center text-rose-400 text-sm">
-        Failed to load table data. Please refresh and try again.
+      <div className="h-64 flex flex-col items-center justify-center text-rose-400 text-sm gap-2">
+        <span>Failed to load dataset table.</span>
+        <span className="text-xs text-slate-500">Check server connection and try again.</span>
       </div>
     );
   }
@@ -57,24 +58,26 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
   const totalPages = Math.ceil(data.filtered_rows / limit);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div className="text-sm text-slate-400">
-          Showing <span className="text-slate-200 font-medium">{data.filtered_rows.toLocaleString()}</span> of{" "}
-          <span className="text-slate-200 font-medium">{data.total_rows.toLocaleString()}</span> rows
-          {globalFilters.length > 0 && <span className="ml-2 text-indigo-400 text-xs">(filtered)</span>}
+    <div className="flex flex-col h-full space-y-4">
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div className="text-xs sm:text-sm text-slate-400">
+          Showing <span className="text-slate-100 font-semibold">{data.filtered_rows.toLocaleString()}</span> of{" "}
+          <span className="text-slate-100 font-semibold">{data.total_rows.toLocaleString()}</span> rows
+          {globalFilters.length > 0 && <span className="ml-2 text-indigo-400 font-medium">(filtered)</span>}
         </div>
 
         <div className="flex items-center gap-2">
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border h-8 px-3 bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800">
-              <Download className="h-4 w-4 mr-2" /> Export
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800">
+                <Download className="h-3.5 w-3.5 mr-1.5" /> Export Data
+              </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-slate-800 border-slate-700 text-slate-200">
-              <DropdownMenuItem onClick={() => handleExport('csv')} className="focus:bg-slate-700 cursor-pointer">
+            <DropdownMenuContent className="bg-slate-900 border-slate-700 text-slate-200 shadow-xl">
+              <DropdownMenuItem onClick={() => handleExport('csv')} className="focus:bg-slate-800 cursor-pointer text-xs">
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')} className="focus:bg-slate-700 cursor-pointer">
+              <DropdownMenuItem onClick={() => handleExport('excel')} className="focus:bg-slate-800 cursor-pointer text-xs">
                 Export as Excel (.xlsx)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -83,7 +86,7 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
           <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="bg-slate-900 border-slate-700 text-slate-300">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-slate-400 px-1">
+          <span className="text-xs text-slate-400 font-mono px-1">
             {page + 1} / {Math.max(1, totalPages)}
           </span>
           <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="bg-slate-900 border-slate-700 text-slate-300">
@@ -92,22 +95,22 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
         </div>
       </div>
 
-      <div className="flex-1 rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-        <div className="overflow-auto h-[600px]">
+      <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden shadow-inner">
+        <div className="overflow-auto max-h-[550px] scrollbar-thin scrollbar-thumb-slate-800">
           <Table>
-            <TableHeader className="bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">
-              <TableRow className="border-slate-700 hover:bg-transparent">
+            <TableHeader className="bg-slate-900/90 sticky top-0 z-10 backdrop-blur-md border-b border-slate-800">
+              <TableRow className="border-slate-800 hover:bg-transparent">
                 {data.columns.map((col: string, idx: number) => (
                   <TableHead
                     key={idx}
-                    className="whitespace-nowrap text-slate-300 cursor-pointer hover:bg-slate-700/50 select-none"
+                    className="whitespace-nowrap text-slate-300 text-xs font-semibold py-3 px-4 cursor-pointer hover:bg-slate-800/60 select-none transition-colors"
                     onClick={() => handleSort(col)}
                   >
-                    <div className="flex items-center gap-1">
-                      {col}
+                    <div className="flex items-center gap-1.5">
+                      <span>{col}</span>
                       {sortCol === col
                         ? <ArrowUpDown className="h-3 w-3 text-indigo-400" />
-                        : <ArrowUpDown className="h-3 w-3 text-slate-600 opacity-0 group-hover:opacity-100" />
+                        : <ArrowUpDown className="h-3 w-3 text-slate-600 opacity-40 group-hover:opacity-100" />
                       }
                     </div>
                   </TableHead>
@@ -116,17 +119,24 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
             </TableHeader>
             <TableBody>
               {data.data.map((row: any, rowIdx: number) => (
-                <TableRow key={rowIdx} className="border-slate-800 hover:bg-slate-800/30">
-                  {data.columns.map((col: string, colIdx: number) => (
-                    <TableCell key={colIdx} className="whitespace-nowrap text-slate-400 max-w-[200px] truncate text-sm">
-                      {row[col] !== null && row[col] !== undefined ? String(row[col]) : ""}
-                    </TableCell>
-                  ))}
+                <TableRow key={rowIdx} className="border-slate-800/50 even:bg-slate-900/30 odd:bg-slate-950/40 hover:bg-slate-800/50 transition-colors">
+                  {data.columns.map((col: string, colIdx: number) => {
+                    const cellVal = row[col] !== null && row[col] !== undefined ? String(row[col]) : "";
+                    return (
+                      <TableCell 
+                        key={colIdx} 
+                        title={cellVal}
+                        className="whitespace-nowrap text-slate-300 max-w-[220px] truncate text-xs font-mono py-2.5 px-4"
+                      >
+                        {cellVal || <span className="text-slate-600 italic">null</span>}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
               {data.data.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={data.columns.length} className="h-32 text-center text-slate-500">
+                  <TableCell colSpan={data.columns.length} className="h-32 text-center text-slate-500 text-sm">
                     No records match the current filters.
                   </TableCell>
                 </TableRow>
@@ -138,3 +148,4 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
     </div>
   );
 }
+

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { BrainCircuit, ArrowLeft, LayoutDashboard, FileBarChart, MessageSquareText, Presentation, Clock, AlertCircle, Loader2, ShieldCheck, Download, FileText } from "lucide-react";
+import { useParams } from "next/navigation";
+import { LayoutDashboard, FileBarChart, MessageSquareText, Presentation, AlertCircle, Loader2, ShieldCheck, Download, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useDatasetProfile, useColumnSummaries, useSession } from "@/hooks/useSessions";
 import { useDashboardSummary, useSavedCharts, useSaveCharts } from "@/hooks/useAnalytics";
-import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/layout/Navbar";
 
 // Profiler Components
@@ -36,13 +35,13 @@ function ProfilerSkeleton() {
     <div className="space-y-8 animate-pulse">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-slate-800/60" />
+          <div key={i} className="h-24 rounded-xl bg-slate-900/60 border border-slate-800" />
         ))}
       </div>
       <div className="space-y-3">
-        <div className="h-8 w-48 rounded bg-slate-800/60" />
+        <div className="h-8 w-48 rounded bg-slate-900/60 border border-slate-800" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-16 rounded-lg bg-slate-800/60" />
+          <div key={i} className="h-16 rounded-xl bg-slate-900/60 border border-slate-800" />
         ))}
       </div>
     </div>
@@ -51,16 +50,15 @@ function ProfilerSkeleton() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-rose-400">
-      <AlertCircle className="h-10 w-10 text-rose-500/50" />
-      <p className="text-sm">{message}</p>
+    <div className="flex flex-col items-center justify-center h-64 gap-3 text-rose-400 bg-slate-900/40 border border-rose-500/20 rounded-2xl p-6">
+      <AlertCircle className="h-10 w-10 text-rose-500/60" />
+      <p className="text-sm font-medium">{message}</p>
     </div>
   );
 }
 
 export default function DatasetWorkspacePage() {
   const params = useParams();
-  const router = useRouter();
   const sessionId = params.sessionId as string;
 
   // Session metadata for expiry display
@@ -98,40 +96,52 @@ export default function DatasetWorkspacePage() {
     saveCharts(newCharts);
   };
 
-
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
       <Navbar datasetName={session?.original_filename || "Loading..."} />
 
-      <main className="container mx-auto px-6 py-6 max-w-[1400px]">
-        <Tabs defaultValue="dashboard" className="w-full">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <main className="container mx-auto px-4 sm:px-6 py-8 max-w-[1400px]">
+        <Tabs defaultValue="dashboard" className="w-full space-y-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center pb-4 border-b border-slate-800/80 gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">Analytics Workspace</h1>
-              <p className="text-slate-400 text-sm">Explore, filter, and visualize your dataset interactively.</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                Analytics Workspace
+                {session?.original_filename && (
+                  <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hidden sm:inline-block">
+                    {session.original_filename}
+                  </span>
+                )}
+              </h1>
+              <p className="text-slate-400 text-sm mt-1">Explore, filter, and visualize your dataset interactively.</p>
             </div>
-            <TabsList className="bg-slate-900 border border-slate-800">
-              <TabsTrigger value="dashboard" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="profiler" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                <FileBarChart className="w-4 h-4 mr-2" /> Data Profile
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                <MessageSquareText className="w-4 h-4 mr-2" /> AI Assistant
-              </TabsTrigger>
-              <TabsTrigger value="analyst" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                <Presentation className="w-4 h-4 mr-2" /> Business Analyst
-              </TabsTrigger>
-              <TabsTrigger value="governance" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-                <ShieldCheck className="w-4 h-4 mr-2" /> Governance
-              </TabsTrigger>
-            </TabsList>
+            
+            <div className="w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+              <TabsList className="bg-slate-900/90 border border-slate-800 p-1 rounded-xl inline-flex w-max">
+                <TabsTrigger value="dashboard" className="text-slate-400 hover:text-slate-200 data-[state=active]:bg-indigo-600 data-[state=active]:text-white rounded-lg text-xs font-semibold px-3 py-1.5 transition-all">
+                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" /> Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="profiler" className="text-slate-400 hover:text-slate-200 data-[state=active]:bg-indigo-600 data-[state=active]:text-white rounded-lg text-xs font-semibold px-3 py-1.5 transition-all">
+                  <FileBarChart className="w-3.5 h-3.5 mr-1.5" /> Data Profile
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="text-slate-400 hover:text-slate-200 data-[state=active]:bg-indigo-600 data-[state=active]:text-white rounded-lg text-xs font-semibold px-3 py-1.5 transition-all">
+                  <MessageSquareText className="w-3.5 h-3.5 mr-1.5" /> AI Assistant
+                  <span className="ml-1.5 text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">AI</span>
+                </TabsTrigger>
+                <TabsTrigger value="analyst" className="text-slate-400 hover:text-slate-200 data-[state=active]:bg-indigo-600 data-[state=active]:text-white rounded-lg text-xs font-semibold px-3 py-1.5 transition-all">
+                  <Presentation className="w-3.5 h-3.5 mr-1.5" /> Business Analyst
+                  <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">AI</span>
+                </TabsTrigger>
+                <TabsTrigger value="governance" className="text-slate-400 hover:text-slate-200 data-[state=active]:bg-indigo-600 data-[state=active]:text-white rounded-lg text-xs font-semibold px-3 py-1.5 transition-all">
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Governance
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
 
           {/* Profiler Tab */}
-          <TabsContent value="profiler" className="space-y-8 animate-in fade-in duration-500 mt-6">
+          <TabsContent value="profiler" className="space-y-8 animate-in fade-in duration-300">
             {profileLoading ? (
               <ProfilerSkeleton />
             ) : profileError ? (
@@ -140,7 +150,7 @@ export default function DatasetWorkspacePage() {
               <>
                 <DatasetSummaryCard summary={profile.summary} />
                 <section className="space-y-4">
-                  <h3 className="text-xl font-semibold text-white border-b border-slate-800 pb-2">Column Explorer</h3>
+                  <h3 className="text-xl font-semibold text-white border-b border-slate-800/80 pb-3">Column Explorer</h3>
                   <ColumnExplorer columns={columns || []} onSelectColumn={setSelectedColumn} />
                 </section>
                 <ColumnDetailsDrawer sessionId={sessionId} columnName={selectedColumn} onClose={() => setSelectedColumn(null)} />
@@ -149,9 +159,9 @@ export default function DatasetWorkspacePage() {
           </TabsContent>
 
           {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="animate-in fade-in duration-500 mt-6">
+          <TabsContent value="dashboard" className="animate-in fade-in duration-300">
             {dashboardLoading ? (
-              <div className="flex items-center justify-center h-64 gap-3 text-slate-500">
+              <div className="flex items-center justify-center h-64 gap-3 text-slate-400">
                 <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
                 <span>Loading dashboard data...</span>
               </div>
@@ -172,22 +182,26 @@ export default function DatasetWorkspacePage() {
                   <ChartRecommendations sessionId={sessionId} onAddChart={handleAddChart} />
 
                   {/* Visualizations Section */}
-                  <div className="border border-slate-800 bg-slate-900/30 rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-4">
+                  <div className="section-panel space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                       <h2 className="text-xl font-semibold text-white">Visualizations</h2>
-                      <div className="flex gap-2 items-center">
-                        <button
-                          onClick={() => window.open(`http://localhost:8000/api/v1/sessions/${sessionId}/export/excel`)}
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md hover:bg-emerald-500/20 transition-colors"
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`${baseUrl}/sessions/${sessionId}/export/excel`)}
+                          className="bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-200"
                         >
-                          <FileText className="h-4 w-4" /> Export Excel
-                        </button>
-                        <button
-                          onClick={() => window.open(`http://localhost:8000/api/v1/sessions/${sessionId}/export/pdf`)}
-                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md hover:bg-rose-500/20 transition-colors"
+                          <FileText className="h-3.5 w-3.5 mr-1.5 text-emerald-400" /> Export Excel
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`${baseUrl}/sessions/${sessionId}/export/pdf`)}
+                          className="bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-200"
                         >
-                          <Download className="h-4 w-4" /> Export PDF
-                        </button>
+                          <Download className="h-3.5 w-3.5 mr-1.5 text-rose-400" /> Export PDF
+                        </Button>
                         {dashboardSummary && (
                           <ChartBuilderDialog
                             columns={allColumns}
@@ -209,8 +223,8 @@ export default function DatasetWorkspacePage() {
                   </div>
 
                   {/* Raw Data Table */}
-                  <div className="border border-slate-800 bg-slate-900/30 rounded-xl p-4">
-                    <h2 className="text-xl font-semibold text-white mb-4">Dataset View</h2>
+                  <div className="section-panel space-y-4">
+                    <h2 className="text-xl font-semibold text-white">Dataset View</h2>
                     <DataTable sessionId={sessionId} globalFilters={globalFilters} />
                   </div>
                 </div>
@@ -219,7 +233,7 @@ export default function DatasetWorkspacePage() {
           </TabsContent>
 
           {/* AI Assistant Tab */}
-          <TabsContent value="ai" className="animate-in fade-in duration-500 mt-6 h-[700px]">
+          <TabsContent value="ai" className="animate-in fade-in duration-300 min-h-[600px] h-auto lg:h-[720px]">
             <div className="flex flex-col lg:flex-row gap-6 h-full">
               <div className="w-full lg:w-1/3 min-w-[320px]">
                 <ChatInterface
@@ -229,11 +243,16 @@ export default function DatasetWorkspacePage() {
                   onSelectMessage={setSelectedAiMessage}
                 />
               </div>
-              <div className="flex-1 border border-slate-800 bg-slate-900/30 rounded-xl p-6 overflow-hidden min-w-0">
+              <div className="flex-1 border border-slate-800 bg-slate-900/40 backdrop-blur-md rounded-2xl p-6 overflow-hidden min-w-0 min-h-[400px]">
                 {!selectedAiMessage ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-3">
-                    <MessageSquareText className="h-12 w-12 text-slate-700" />
-                    <p className="text-sm">Ask a question in the chat to see results here.</p>
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 py-16">
+                    <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                      <MessageSquareText className="h-8 w-8" />
+                    </div>
+                    <p className="text-base font-medium text-slate-200">Ask a question in the chat to see results here</p>
+                    <p className="text-xs text-slate-500 max-w-sm text-center">
+                      Generate DuckDB SQL queries dynamically and inspect data tables & charts.
+                    </p>
                   </div>
                 ) : (
                   <ChatResults message={selectedAiMessage} sessionId={sessionId} />
@@ -243,12 +262,12 @@ export default function DatasetWorkspacePage() {
           </TabsContent>
 
           {/* Business Analyst Tab */}
-          <TabsContent value="analyst" className="animate-in fade-in duration-500 mt-6">
+          <TabsContent value="analyst" className="animate-in fade-in duration-300">
             <AnalystView sessionId={sessionId} />
           </TabsContent>
 
           {/* Governance Tab */}
-          <TabsContent value="governance" className="animate-in fade-in duration-500 mt-6">
+          <TabsContent value="governance" className="animate-in fade-in duration-300">
             <GovernanceView sessionId={sessionId} />
           </TabsContent>
         </Tabs>
@@ -261,3 +280,4 @@ export default function DatasetWorkspacePage() {
     </div>
   );
 }
+

@@ -11,7 +11,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 
-from app.core.config import settings
+from app.core.config import settings, get_kafka_config
 from app.domains.shared.database import SessionLocal
 from app.domains.shared.models import Job, ProcessedEvent
 from app.domains.jobs.events import EventSchema
@@ -37,18 +37,19 @@ class KafkaWorker:
 
     async def setup(self):
         logger.info(f"Connecting to Kafka at {settings.KAFKA_BOOTSTRAP_SERVERS}")
+        kafka_config = get_kafka_config()
         self.consumer = AIOKafkaConsumer(
             "dataset.uploaded",
             "report.requested",
-            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
             group_id="insightflow-workers",
             auto_offset_reset="earliest",
             enable_auto_commit=False,
-            value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+            value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+            **kafka_config
         )
         self.producer = AIOKafkaProducer(
-            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            **kafka_config
         )
         await self.consumer.start()
         await self.producer.start()

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle } from "lucide-react";
@@ -58,12 +58,21 @@ export default function ChartBuilderDialog({
         <PlusCircle className="mr-2 h-4 w-4" /> Add Chart
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-slate-950 text-slate-200 border-slate-800">
+        <DialogContent className="bg-slate-950 text-slate-200 border-slate-800 sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Create Visualization</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <PlusCircle className="h-4 w-4 text-indigo-400" />
+            Create Visualization
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-xs text-slate-400 sm:grid-cols-3">
+            <span><strong className="text-slate-200">{columns.length}</strong> total columns</span>
+            <span><strong className="text-blue-300">{numericColumns.length}</strong> numeric</span>
+            <span><strong className="text-purple-300">{categoricalColumns.length}</strong> categorical</span>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-400">Chart Title</label>
             <Input 
