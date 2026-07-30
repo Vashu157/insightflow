@@ -20,9 +20,9 @@ class KafkaProducerClient:
             await self.producer.start()
             logger.info("Kafka Producer started successfully.")
         except Exception as e:
-
             logger.error(f"Failed to start Kafka Producer: {e}")
             self.producer = None
+            raise
 
     async def stop(self):
         if self.producer:

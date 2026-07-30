@@ -57,7 +57,9 @@ async def consume_job_updates():
     except asyncio.CancelledError:
         pass
     except Exception as e:
-        logger.error(f"WebSocket Gateway Kafka Consumer failed: {e}")
+        import os
+        logger.error(f"WebSocket Gateway Kafka Consumer failed: {e}. Exiting application.")
+        os._exit(1)
     finally:
         await consumer.stop()
 
