@@ -16,15 +16,23 @@ from app.domains.reports.router import router as reports_router
 from app.domains.export.router import router as export_router
 from app.domains.jobs.router import router as jobs_router
 
+from app.domains.jobs.producer import producer_client
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Start the background cleanup task
     logger.info("Application starting up...", extra={"extra_info": {"event": "startup"}})
     cleanup_task = asyncio.create_task(cleanup_expired_sessions())
+    
+    # Start Kafka Producer
+    await producer_client.start()
+    
     yield
-    # Shutdown: Cancel the cleanup task
+    
+    # Shutdown: Cancel the cleanup task and stop Kafka Producer
     logger.info("Application shutting down...", extra={"extra_info": {"event": "shutdown"}})
     cleanup_task.cancel()
+    await producer_client.stop()
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 

@@ -14,3 +14,4 @@ pytest
 httpx
 pytest-asyncio
 boto3
+aiokafka

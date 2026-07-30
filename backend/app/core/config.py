@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_ENDPOINT_URL: str = ""
     S3_BUCKET_NAME: str = "datasets"
+    
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
 
     class Config:
         env_file = ".env"

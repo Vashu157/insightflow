@@ -1,10 +1,11 @@
 import uuid
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.domains.shared.database import get_db
 from app.domains.shared.models import Job, Session as SessionModel
 from app.domains.jobs.schemas import JobStatusResponse, JobCreateResponse
-from app.domains.jobs.worker import run_profiling_job, run_report_job
+from app.domains.jobs.events import EventSchema
+from app.domains.jobs.producer import producer_client
 
 router = APIRouter()
 
@@ -27,8 +28,8 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
     )
 
 @router.post("/profile/{session_id}", response_model=JobCreateResponse)
-def start_profiling_job(session_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Triggers an asynchronous profiling job."""
+async def start_profiling_job(session_id: str, db: Session = Depends(get_db)):
+    """Triggers an asynchronous profiling job via Kafka."""
     db_session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -38,12 +39,18 @@ def start_profiling_job(session_id: str, background_tasks: BackgroundTasks, db: 
     db.add(job)
     db.commit()
 
-    background_tasks.add_task(run_profiling_job, job_id=job_id_str, session_id=session_id)
+    event = EventSchema(
+        job_id=job_id_str,
+        session_id=session_id,
+        event_type="dataset.uploaded"
+    )
+    await producer_client.publish("dataset.uploaded", event)
+    
     return JobCreateResponse(job_id=job_id_str, status="QUEUED")
 
 @router.post("/report/{session_id}", response_model=JobCreateResponse)
-def start_report_job(session_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Triggers an asynchronous AI Business Report generation job."""
+async def start_report_job(session_id: str, db: Session = Depends(get_db)):
+    """Triggers an asynchronous AI Business Report generation job via Kafka."""
     db_session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -53,5 +60,11 @@ def start_report_job(session_id: str, background_tasks: BackgroundTasks, db: Ses
     db.add(job)
     db.commit()
 
-    background_tasks.add_task(run_report_job, job_id=job_id_str, session_id=session_id)
+    event = EventSchema(
+        job_id=job_id_str,
+        session_id=session_id,
+        event_type="report.requested"
+    )
+    await producer_client.publish("report.requested", event)
+    
     return JobCreateResponse(job_id=job_id_str, status="QUEUED")

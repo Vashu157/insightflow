@@ -36,3 +36,9 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     error_message = Column(String, nullable=True)
+
+class ProcessedEvent(Base):
+    __tablename__ = "processed_events"
+    
+    event_id = Column(String, primary_key=True, index=True)
+    processed_at = Column(DateTime, default=datetime.utcnow)
