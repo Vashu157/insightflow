@@ -10,8 +10,8 @@ from alembic import context
 # Add backend directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.models.base import Base
-from app.models.session import Session
+from app.domains.shared.database import Base
+from app.domains.shared.models import Session, Job
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

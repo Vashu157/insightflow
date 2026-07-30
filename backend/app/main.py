@@ -6,9 +6,15 @@ from starlette.requests import Request
 import time
 
 from app.core.config import settings
-from app.routers import sessions, profiles, analytics, ai, insights, exports, share
 from app.core.cleanup import cleanup_expired_sessions
-from app.core.logging import logger
+from app.domains.shared.logging import logger
+
+from app.domains.session.router import session_router, share_router
+from app.domains.profiling.router import router as profiling_router
+from app.domains.ai.router import router as ai_router
+from app.domains.reports.router import router as reports_router
+from app.domains.export.router import router as export_router
+from app.domains.jobs.router import router as jobs_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,13 +54,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
-app.include_router(profiles.router, tags=["profiles"])
-app.include_router(analytics.router, tags=["analytics"])
-app.include_router(ai.router, tags=["ai"])
-app.include_router(insights.router, tags=["insights"])
-app.include_router(exports.router, tags=["exports"])
-app.include_router(share.router, tags=["share"])
+app.include_router(session_router, prefix="/sessions", tags=["sessions"])
+app.include_router(share_router, prefix="/share", tags=["share"])
+app.include_router(profiling_router, tags=["profiles"])
+app.include_router(reports_router, tags=["analytics"])
+app.include_router(ai_router, tags=["ai"])
+app.include_router(export_router, tags=["exports"])
+app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
 
 @app.get("/")
 def read_root():
