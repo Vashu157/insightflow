@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Sparkles, PlusCircle, Loader2 } from "lucide-react";
 
+import api from "@/lib/api";
+
 export default function ChartRecommendations({ 
   sessionId, 
   onAddChart 
@@ -15,7 +17,7 @@ export default function ChartRecommendations({
   useEffect(() => {
     const fetchRecs = async () => {
       try {
-        const res = await axios.get(`http://localhost:8000/api/v1/sessions/${sessionId}/recommendations`);
+        const res = await api.get(`/sessions/${sessionId}/recommendations`);
         setRecommendations(res.data);
       } catch (error) {
         console.error("Failed to fetch recommendations", error);

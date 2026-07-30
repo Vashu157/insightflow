@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import { format } from "date-fns";
 import { History, RotateCcw, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ export default function GovernanceView({ sessionId }: { sessionId: string }) {
 
   const fetchVersions = async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/v1/sessions/${sessionId}/versions`);
+      const res = await api.get(`/sessions/${sessionId}/versions`);
       setVersions(res.data);
     } catch (error) {
       console.error("Failed to fetch versions", error);
@@ -27,7 +27,7 @@ export default function GovernanceView({ sessionId }: { sessionId: string }) {
   const handleRestore = async (versionId: string) => {
     setRestoring(versionId);
     try {
-      await axios.post(`http://localhost:8000/api/v1/sessions/${sessionId}/versions/${versionId}/restore`);
+      await api.post(`/sessions/${sessionId}/versions/${versionId}/restore`);
       toast.success("Dataset version restored successfully.");
       fetchVersions();
     } catch (error) {

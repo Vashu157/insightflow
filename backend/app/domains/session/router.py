@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import Any
 
@@ -6,6 +6,7 @@ from app.domains.shared.database import get_db
 from app.domains.session.schemas import SessionResponse, DatasetPreviewResponse, DatasetVersionResponse
 from app.domains.session.interfaces import ISessionService
 from app.domains.session.dependencies import get_session_service
+from app.core.limiter import limiter
 
 from app.core.security import validate_upload_file
 
@@ -13,7 +14,9 @@ session_router = APIRouter()
 share_router = APIRouter()
 
 @session_router.post("/upload", response_model=SessionResponse)
+@limiter.limit("5/minute")
 def upload_dataset(
+    request: Request,
     file: UploadFile = File(...), 
     db: Session = Depends(get_db),
     session_service: ISessionService = Depends(get_session_service)

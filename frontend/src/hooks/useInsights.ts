@@ -10,6 +10,7 @@ export const useInsights = (sessionId: string) => {
     },
     enabled: !!sessionId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry 404s
   });
 };
 

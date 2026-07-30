@@ -8,9 +8,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from prometheus_client import make_asgi_app
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from app.core.limiter import limiter
 
 from app.core.config import settings
 from app.core.cleanup import cleanup_expired_sessions
@@ -33,7 +33,6 @@ from app.domains.jobs.producer import producer_client
 from app.domains.shared.websocket import manager
 from aiokafka import AIOKafkaConsumer
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 async def consume_job_updates():
     """Background task to consume job.updates and broadcast to WebSockets."""
@@ -117,11 +116,19 @@ async def log_and_measure_requests(request: Request, call_next):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:3001", 
+        "https://insightflow-beryl.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add SlowAPIMiddleware for rate limiting
+from slowapi.middleware import SlowAPIMiddleware
+app.add_middleware(SlowAPIMiddleware)
 
 # Mount Prometheus metrics app at /metrics
 metrics_app = make_asgi_app()

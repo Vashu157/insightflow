@@ -32,7 +32,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
       }
       
       if (jobStatus.payload.status === "COMPLETED") {
-        queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
+        queryClient.invalidateQueries({ queryKey: ["insights", sessionId] });
         setIsRefreshing(false);
         toast.success("Business report generated successfully!");
       } else if (jobStatus.payload.status === "FAILED") {
@@ -92,15 +92,31 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
   }
 
   if (error || !data) {
+    // If it's a 404, it just means the report hasn't been generated yet.
+    const errStatus = (error as any)?.response?.status || (error as any)?.status;
+    const errMsg = String((error as any)?.message || error);
+    const isNotFound = errStatus === 404 || errMsg.includes("404");
+    
     return (
       <div className="flex flex-col items-center justify-center h-[400px] gap-4">
-        <AlertCircle className="h-12 w-12 text-rose-500/50" />
+        {isNotFound ? (
+          <FileText className="h-12 w-12 text-slate-500/50" />
+        ) : (
+          <AlertCircle className="h-12 w-12 text-rose-500/50" />
+        )}
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-rose-400 mb-1">Report Generation Failed</h3>
-          <p className="text-sm text-slate-400">Could not generate the business report. Check your API key configuration.</p>
+          <h3 className="text-lg font-semibold text-white mb-1">
+            {isNotFound ? "No Business Report Found" : "Report Generation Failed"}
+          </h3>
+          <p className="text-sm text-slate-400">
+            {isNotFound 
+              ? "Generate a comprehensive AI business report to uncover deep insights." 
+              : "Could not generate the business report. Check your API key configuration."}
+          </p>
         </div>
-        <Button onClick={() => refetch()} variant="outline" className="bg-slate-800 border-slate-700 hover:bg-slate-700 mt-2">
-          <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+        <Button onClick={handleRefresh} variant="outline" className="bg-slate-800 border-slate-700 hover:bg-slate-700 mt-2">
+          {isNotFound ? <Lightbulb className="h-4 w-4 mr-2 text-amber-400" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {isNotFound ? "Generate Report" : "Try Again"}
         </Button>
       </div>
     );
