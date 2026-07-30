@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadCloud, FileType, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,13 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const uploadDataset = useUploadDataset();
   const { jobStatus } = useJobWebSocket(activeSessionId);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -48,9 +55,36 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
           setCurrentStage("Queued");
           setActiveSessionId(data.id);
           try {
-            await api.post(`/jobs/profile/${data.id}`);
-            // Wait for WebSocket to take over the progress.
-            // When profiling hits 100%, we'll call onUploadSuccess.
+            const res = await api.post(`/jobs/profile/${data.id}`);
+            const jobId = res.data.job_id;
+            
+            // Fallback polling in case WebSocket connection is too slow and misses the rapid job completion.
+            pollIntervalRef.current = setInterval(async () => {
+              try {
+                const jobRes = await api.get(`/jobs/${jobId}`);
+                if (jobRes.data.status === "COMPLETED") {
+                  if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                  setProgress(100);
+                  toast.success("Dataset processed successfully!");
+                  setTimeout(() => onUploadSuccess(data.id), 500);
+                } else if (jobRes.data.status === "FAILED") {
+                  if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                  toast.error(`Processing failed: ${jobRes.data.error_message || "Unknown error"}`);
+                  setProgress(0);
+                } else {
+                  // Fallback progress updates if WS misses
+                  if (jobRes.data.progress) {
+                    setProgress(jobRes.data.progress);
+                  }
+                }
+              } catch (e) {
+                console.error("Failed to poll job status:", e);
+              }
+            }, 1000);
+            
+            // Clean up polling if component unmounts or successful
+            // We can attach it to a ref or just let it naturally clear
+            
           } catch (err) {
              toast.error("Failed to start profiling job.");
              setProgress(0);
@@ -67,6 +101,10 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
 
   // Listen to WebSocket updates
   useEffect(() => {
+    if (jobStatus) {
+      console.log("[UploadCard] Received jobStatus:", jobStatus);
+    }
+    
     if (jobStatus?.payload) {
       if (jobStatus.payload.progress !== undefined) {
         setProgress(jobStatus.payload.progress);
@@ -75,10 +113,13 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
         setCurrentStage(jobStatus.payload.current_stage);
       }
       
-      if (jobStatus.payload.status === "COMPLETED" && jobStatus.event_type === "dataset.profiled") {
+      console.log("[UploadCard] Current status from payload:", jobStatus.payload.status);
+      if (jobStatus.payload.status === "COMPLETED") {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         toast.success("Dataset processed successfully!");
         setTimeout(() => onUploadSuccess(activeSessionId!), 500);
       } else if (jobStatus.payload.status === "FAILED") {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         toast.error(`Processing failed: ${jobStatus.payload.error_message}`);
         setProgress(0);
       }

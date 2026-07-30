@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AnalystView({ sessionId }: { sessionId: string }) {
+  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useInsights(sessionId);
   const { mutate: refresh } = useRefreshInsights(sessionId);
   const [isSharing, setIsSharing] = useState(false);
@@ -29,10 +31,10 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
         setCurrentStage(jobStatus.payload.current_stage);
       }
       
-      if (jobStatus.payload.status === "COMPLETED" && jobStatus.event_type === "report.completed") {
-        toast.success("Report generated successfully!");
+      if (jobStatus.payload.status === "COMPLETED") {
+        queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
         setIsRefreshing(false);
-        refetch(); // Refetch the updated data!
+        toast.success("Business report generated successfully!");
       } else if (jobStatus.payload.status === "FAILED") {
         toast.error(`Processing failed: ${jobStatus.payload.error_message}`);
         setIsRefreshing(false);
