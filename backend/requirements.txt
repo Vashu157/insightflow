@@ -21,3 +21,5 @@ opentelemetry-sdk==1.25.0
 opentelemetry-instrumentation-fastapi==0.46b0
 slowapi==0.1.9
 filetype==1.2.0
+croniter==2.0.1
+xlsxwriter==3.2.0

@@ -3,22 +3,25 @@
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BrainCircuit, ArrowLeft, LayoutDashboard, FileBarChart, MessageSquareText, Presentation, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { BrainCircuit, ArrowLeft, LayoutDashboard, FileBarChart, MessageSquareText, Presentation, Clock, AlertCircle, Loader2, ShieldCheck, Download, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDatasetProfile, useColumnSummaries, useSession } from "@/hooks/useSessions";
 import { useDashboardSummary, useSavedCharts, useSaveCharts } from "@/hooks/useAnalytics";
 import { formatDistanceToNow } from "date-fns";
+import Navbar from "@/components/layout/Navbar";
 
 // Profiler Components
 import DatasetSummaryCard from "@/components/profiler/DatasetSummaryCard";
 import ColumnExplorer from "@/components/profiler/ColumnExplorer";
 import ColumnDetailsDrawer from "@/components/profiler/ColumnDetailsDrawer";
+import GovernanceView from "@/components/datasets/GovernanceView";
 
 // Dashboard Components
 import FilterSidebar from "@/components/dashboard/FilterSidebar";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import ChartBuilderDialog from "@/components/dashboard/ChartBuilderDialog";
 import DataTable from "@/components/dashboard/DataTable";
+import ChartRecommendations from "@/components/dashboard/ChartRecommendations";
 
 // AI Assistant Components
 import ChatInterface from "@/components/ai/ChatInterface";
@@ -99,29 +102,7 @@ export default function DatasetWorkspacePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
-        <div className="container mx-auto flex h-16 items-center px-6 gap-4">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500">
-              <BrainCircuit className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight text-white hidden sm:block">InsightFlow</span>
-          </Link>
-
-          <div className="flex items-center text-sm text-slate-500 gap-1">
-            <span className="hidden sm:inline">/</span>
-            <span className="text-slate-300 truncate max-w-[200px]">{session?.original_filename || "Loading..."}</span>
-          </div>
-
-          <div className="ml-auto flex items-center gap-4">
-
-            <Link href="/datasets" className="text-sm font-medium text-slate-400 hover:text-white transition-colors flex items-center gap-1">
-              <ArrowLeft className="h-4 w-4" /> New Dataset
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar datasetName={session?.original_filename || "Loading..."} />
 
       <main className="container mx-auto px-6 py-6 max-w-[1400px]">
         <Tabs defaultValue="dashboard" className="w-full">
@@ -142,6 +123,9 @@ export default function DatasetWorkspacePage() {
               </TabsTrigger>
               <TabsTrigger value="analyst" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
                 <Presentation className="w-4 h-4 mr-2" /> Business Analyst
+              </TabsTrigger>
+              <TabsTrigger value="governance" className="text-slate-400 hover:text-slate-300 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+                <ShieldCheck className="w-4 h-4 mr-2" /> Governance
               </TabsTrigger>
             </TabsList>
           </div>
@@ -184,18 +168,35 @@ export default function DatasetWorkspacePage() {
 
                 {/* Main Dashboard Area */}
                 <div className="flex-1 space-y-6 min-w-0">
+                  {/* AI Recommendations */}
+                  <ChartRecommendations sessionId={sessionId} onAddChart={handleAddChart} />
+
                   {/* Visualizations Section */}
                   <div className="border border-slate-800 bg-slate-900/30 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-4">
                       <h2 className="text-xl font-semibold text-white">Visualizations</h2>
-                      {dashboardSummary && (
-                        <ChartBuilderDialog
-                          columns={allColumns}
-                          numericColumns={dashboardSummary.numeric_columns}
-                          categoricalColumns={dashboardSummary.categorical_columns}
-                          onSave={handleAddChart}
-                        />
-                      )}
+                      <div className="flex gap-2 items-center">
+                        <button
+                          onClick={() => window.open(`http://localhost:8000/api/v1/sessions/${sessionId}/export/excel`)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md hover:bg-emerald-500/20 transition-colors"
+                        >
+                          <FileText className="h-4 w-4" /> Export Excel
+                        </button>
+                        <button
+                          onClick={() => window.open(`http://localhost:8000/api/v1/sessions/${sessionId}/export/pdf`)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md hover:bg-rose-500/20 transition-colors"
+                        >
+                          <Download className="h-4 w-4" /> Export PDF
+                        </button>
+                        {dashboardSummary && (
+                          <ChartBuilderDialog
+                            columns={allColumns}
+                            numericColumns={dashboardSummary.numeric_columns}
+                            categoricalColumns={dashboardSummary.categorical_columns}
+                            onSave={handleAddChart}
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="min-h-[400px]">
                       <DashboardGrid
@@ -244,6 +245,11 @@ export default function DatasetWorkspacePage() {
           {/* Business Analyst Tab */}
           <TabsContent value="analyst" className="animate-in fade-in duration-500 mt-6">
             <AnalystView sessionId={sessionId} />
+          </TabsContent>
+
+          {/* Governance Tab */}
+          <TabsContent value="governance" className="animate-in fade-in duration-500 mt-6">
+            <GovernanceView sessionId={sessionId} />
           </TabsContent>
         </Tabs>
       </main>

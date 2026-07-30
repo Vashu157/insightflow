@@ -41,3 +41,36 @@ def get_admin_status(db: Session = Depends(get_db)):
             for j in failed_jobs
         ]
     }
+
+from app.domains.shared.models import UsageMetric
+from sqlalchemy import func
+
+@admin_router.get("/analytics")
+def get_usage_analytics(db: Session = Depends(get_db)):
+    # Total actions
+    total_actions = db.query(UsageMetric).count()
+    
+    # Action distribution
+    action_counts = db.query(
+        UsageMetric.action, 
+        func.count(UsageMetric.id)
+    ).group_by(UsageMetric.action).all()
+    
+    # Average duration
+    avg_duration = db.query(func.avg(UsageMetric.duration_ms)).scalar()
+    
+    return {
+        "total_actions": total_actions,
+        "average_duration_ms": float(avg_duration) if avg_duration else 0,
+        "action_distribution": {k: v for k, v in action_counts}
+    }
+
+from app.domains.shared.search import EnterpriseSearchService
+from typing import Optional
+
+@admin_router.get("/search")
+def global_search(q: Optional[str] = None, db: Session = Depends(get_db)):
+    """Global search across datasets and reports."""
+    if not q:
+        return {"datasets": [], "reports": []}
+    return EnterpriseSearchService.search(db, q)

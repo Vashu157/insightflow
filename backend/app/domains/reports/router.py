@@ -33,6 +33,15 @@ def get_saved_charts(
     """Retrieve saved chart layout and configuration for a session."""
     return report_service.get_charts(session_id)
 
+@router.get("/sessions/{session_id}/recommendations", response_model=List[ChartConfig])
+def get_chart_recommendations(
+    session_id: str,
+    db: Session = Depends(get_db),
+    report_service: IReportService = Depends(get_report_service)
+):
+    """Get AI-suggested chart configurations based on dataset schema."""
+    return report_service.get_visualization_recommendations(db, session_id)
+
 @router.post("/sessions/{session_id}/charts/save")
 def save_charts(
     session_id: str, 
@@ -94,3 +103,49 @@ def get_insights(
             )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load AI Insights: {e}")
+
+from fastapi.responses import StreamingResponse
+from app.domains.reports.exports import ExportService
+
+@router.get("/sessions/{session_id}/export/excel")
+def export_excel(
+    session_id: str,
+    db: Session = Depends(get_db),
+    report_service: IReportService = Depends(get_report_service),
+    storage = Depends(get_storage_service)
+):
+    df = report_service._load_dataframe(db, session_id)
+    profile = {}
+    report = {}
+    
+    try:
+        with open(storage.get_cache_path(session_id, "profile.json"), "r") as f:
+            profile = json.load(f)
+        with open(storage.get_cache_path(session_id, "insights_report.json"), "r") as f:
+            report = json.load(f).get("report", {})
+    except: pass
+    
+    output = ExportService.generate_excel_package(df, report, profile)
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=insightflow_report_{session_id}.xlsx"}
+    )
+
+@router.get("/sessions/{session_id}/export/pdf")
+def export_pdf(
+    session_id: str,
+    db: Session = Depends(get_db),
+    report_service: IReportService = Depends(get_report_service),
+    storage = Depends(get_storage_service)
+):
+    df = report_service._load_dataframe(db, session_id)
+    profile = {}
+    report = {}
+    
+    output = ExportService.generate_pdf_package(df, report, profile)
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=insightflow_report_{session_id}.pdf"}
+    )

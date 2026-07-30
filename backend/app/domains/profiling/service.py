@@ -13,6 +13,7 @@ from app.domains.profiling.schemas import DatasetProfile, DatasetSummary, Column
 from app.domains.shared.interfaces import StorageService
 from app.domains.profiling.interfaces import IProfilingService
 from app.domains.shared.logging import logger, current_session_id
+from app.domains.profiling.data_quality import DataQualityAnalyzer
 
 class ProfilingServiceImpl(IProfilingService):
     def __init__(self, storage: StorageService):
@@ -77,6 +78,8 @@ class ProfilingServiceImpl(IProfilingService):
             missing_perc = (missing_count / (total_rows * total_cols)) * 100 if total_rows > 0 else 0
             memory_usage = float(df.memory_usage(deep=True).sum() / (1024 * 1024))
             
+            dq_results = DataQualityAnalyzer.analyze(df)
+            
             summary = DatasetSummary(
                 total_rows=total_rows,
                 total_columns=total_cols,
@@ -85,7 +88,9 @@ class ProfilingServiceImpl(IProfilingService):
                 missing_values=missing_count,
                 missing_percentage=round(missing_perc, 2),
                 dataset_size_mb=round(db_session.file_size / (1024 * 1024), 2),
-                upload_time=db_session.upload_time.isoformat()
+                upload_time=db_session.upload_time.isoformat(),
+                data_quality_score=dq_results["score"],
+                data_quality_issues=dq_results["issues"]
             )
 
             columns_details = []

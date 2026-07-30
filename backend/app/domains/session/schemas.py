@@ -30,3 +30,15 @@ class DatasetPreviewResponse(BaseModel):
     columns: List[str]
     data_types: Dict[str, str]
     data: List[Dict[str, Any]]
+
+class DatasetVersionResponse(BaseModel):
+    id: UUID4
+    session_id: UUID4
+    version_number: int
+    created_at: datetime
+    created_by: str
+    change_summary: str
+    row_count: int
+    
+    class Config:
+        from_attributes = True

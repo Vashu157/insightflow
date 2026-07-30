@@ -28,5 +28,9 @@ class IReportService(ABC):
         pass
         
     @abstractmethod
-    def generate_report(self, db: Session, session_id: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def generate_report(self, db: Session, session_id: str, force_refresh: bool = False, progress_callback: Callable[[int], None] = None) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def get_visualization_recommendations(self, db: Session, session_id: str) -> List[ChartConfig]:
         pass

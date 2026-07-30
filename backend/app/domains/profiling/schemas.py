@@ -10,6 +10,8 @@ class DatasetSummary(BaseModel):
     missing_percentage: float
     dataset_size_mb: float
     upload_time: str
+    data_quality_score: Optional[float] = None
+    data_quality_issues: Optional[List[str]] = None
 
 class ColumnSummary(BaseModel):
     name: str

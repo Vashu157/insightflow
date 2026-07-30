@@ -8,7 +8,7 @@ from typing import Dict, Any
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 
-from app.domains.shared.models import Session as SessionModel
+from app.domains.shared.models import Session as SessionModel, DatasetVersion
 from app.domains.session.schemas import SessionResponse, DatasetPreviewResponse
 from app.domains.shared.interfaces import StorageService
 from app.domains.session.interfaces import ISessionService
@@ -58,6 +58,20 @@ class SessionServiceImpl(ISessionService):
             db.add(db_session)
             db.commit()
             db.refresh(db_session)
+            
+            # Create Version 1
+            v1 = DatasetVersion(
+                session_id=session_id,
+                version_number=1,
+                created_by="system",
+                change_summary="Initial upload",
+                file_path=file.filename,
+                row_count=row_count,
+                schema_snapshot={col: str(dtype) for col, dtype in df.dtypes.items()}
+            )
+            db.add(v1)
+            db.commit()
+
             
             return db_session
             
@@ -175,3 +189,45 @@ class SessionServiceImpl(ISessionService):
             "insights": insights_data.get("report", {}),
             "charts": charts_data
         }
+
+    def list_versions(self, db: Session, session_id: str) -> list:
+        db_session = self.get_session(db, session_id)
+        versions = db.query(DatasetVersion).filter(DatasetVersion.session_id == session_id).order_by(DatasetVersion.version_number.desc()).all()
+        return versions
+
+    def create_version(self, db: Session, session_id: str, change_summary: str, file_path: str, row_count: int, schema_snapshot: dict = None) -> DatasetVersion:
+        db_session = self.get_session(db, session_id)
+        latest_version = db.query(DatasetVersion).filter(DatasetVersion.session_id == session_id).order_by(DatasetVersion.version_number.desc()).first()
+        v_num = (latest_version.version_number + 1) if latest_version else 1
+        
+        new_version = DatasetVersion(
+            session_id=session_id,
+            version_number=v_num,
+            created_by="system",
+            change_summary=change_summary,
+            file_path=file_path,
+            row_count=row_count,
+            schema_snapshot=schema_snapshot
+        )
+        db.add(new_version)
+        db.commit()
+        db.refresh(new_version)
+        return new_version
+
+    def restore_version(self, db: Session, session_id: str, version_id: str) -> dict:
+        db_session = self.get_session(db, session_id)
+        version = db.query(DatasetVersion).filter(DatasetVersion.id == version_id, DatasetVersion.session_id == session_id).first()
+        if not version:
+            raise HTTPException(status_code=404, detail="Version not found")
+            
+        # Here we would logic to copy version.file_path to db_session.stored_filename
+        # but for now we just update session reference
+        db_session.stored_filename = version.file_path
+        db_session.row_count = version.row_count
+        db.commit()
+        
+        # Create a new version representing the restore
+        self.create_version(db, session_id, f"Restored from version {version.version_number}", version.file_path, version.row_count, version.schema_snapshot)
+        
+        return {"status": "success", "message": f"Restored to version {version.version_number}"}
+

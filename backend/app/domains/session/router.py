@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Any
 
 from app.domains.shared.database import get_db
-from app.domains.session.schemas import SessionResponse, DatasetPreviewResponse
+from app.domains.session.schemas import SessionResponse, DatasetPreviewResponse, DatasetVersionResponse
 from app.domains.session.interfaces import ISessionService
 from app.domains.session.dependencies import get_session_service
 
@@ -56,6 +56,23 @@ def generate_share_link(
     """Generate a unique token to publicly share the session insights (read-only)."""
     return session_service.generate_share_link(db, session_id)
 
+
+@session_router.get("/{session_id}/versions", response_model=list[DatasetVersionResponse])
+def list_versions(
+    session_id: str, 
+    db: Session = Depends(get_db),
+    session_service: ISessionService = Depends(get_session_service)
+) -> Any:
+    return session_service.list_versions(db, session_id)
+
+@session_router.post("/{session_id}/versions/{version_id}/restore")
+def restore_version(
+    session_id: str,
+    version_id: str,
+    db: Session = Depends(get_db),
+    session_service: ISessionService = Depends(get_session_service)
+) -> Any:
+    return session_service.restore_version(db, session_id, version_id)
 
 @share_router.get("/{token}")
 def get_shared_report(

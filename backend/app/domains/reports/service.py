@@ -13,6 +13,7 @@ from app.domains.shared.models import Session as SessionModel
 from app.domains.reports.schemas import (
     FilterRule, ChartConfig, DashboardSummary, AggregationRule, BusinessReport
 )
+from app.domains.reports.recommendations import RecommendationEngine
 from app.domains.shared.interfaces import StorageService
 from app.domains.reports.interfaces import IReportService
 from app.domains.shared.logging import logger, current_session_id
@@ -317,3 +318,7 @@ Respond exactly matching the required JSON schema.
             logger.error(f"Failed to generate Business Report: {str(e)}", exc_info=True)
             current_session_id.set("")
             raise HTTPException(status_code=500, detail=f"Failed to generate Business Report: {str(e)}")
+
+    def get_visualization_recommendations(self, db: Session, session_id: str) -> List[ChartConfig]:
+        summary = self.get_dashboard_summary(db, session_id)
+        return RecommendationEngine.suggest_visualizations(summary)

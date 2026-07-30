@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Database, LayoutGrid, HardDrive, Files, AlertTriangle, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Database, LayoutGrid, HardDrive, Files, AlertTriangle, ShieldAlert, BadgeCheck } from "lucide-react";
 
 export default function DatasetSummaryCard({ summary }: { summary: any }) {
   if (!summary) return null;
@@ -11,6 +10,12 @@ export default function DatasetSummaryCard({ summary }: { summary: any }) {
     { label: "Memory Usage", value: `${summary.memory_usage_mb} MB`, icon: HardDrive, color: "text-purple-400" },
     { label: "Missing Values", value: `${summary.missing_values.toLocaleString()} (${summary.missing_percentage}%)`, icon: AlertTriangle, color: "text-amber-400" },
     { label: "Duplicate Rows", value: summary.duplicate_rows.toLocaleString(), icon: Files, color: "text-rose-400" },
+    { 
+      label: "Quality Score", 
+      value: summary.quality_score !== undefined ? `${summary.quality_score.toFixed(1)}/100` : "N/A", 
+      icon: summary.quality_score >= 80 ? BadgeCheck : ShieldAlert, 
+      color: summary.quality_score >= 80 ? "text-emerald-400" : "text-amber-400" 
+    },
   ];
 
   return (
@@ -30,6 +35,19 @@ export default function DatasetSummaryCard({ summary }: { summary: any }) {
             </div>
           ))}
         </div>
+
+        {summary.quality_issues && summary.quality_issues.length > 0 && (
+          <div className="mt-6 border border-rose-900/50 bg-rose-950/20 rounded-xl p-4">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-rose-400 mb-2">
+              <AlertTriangle className="h-4 w-4" /> Data Quality Issues Detected
+            </h4>
+            <ul className="list-disc list-inside text-sm text-slate-300 space-y-1 ml-2">
+              {summary.quality_issues.map((issue: string, idx: number) => (
+                <li key={idx}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
