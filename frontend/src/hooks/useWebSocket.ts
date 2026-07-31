@@ -23,12 +23,9 @@ export const useJobWebSocket = (sessionId: string | null) => {
     if (!sessionId) return;
 
     const connect = () => {
-      // Assuming frontend and backend are on the same domain or localhost
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      // Fallback to localhost:8000 for local dev if window.location isn't API server
-      const host = window.location.hostname === "localhost" ? "localhost:8000" : window.location.host;
-      
-      const wsUrl = `${protocol}//${host}/jobs/ws/${sessionId}`;
+      // Use NEXT_PUBLIC_API_URL to construct the WebSocket URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const wsUrl = apiUrl.replace(/^http/, "ws") + `/jobs/ws/${sessionId}`;
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ArrowUpDown, Download, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import api from "@/lib/api";
 
 export default function DataTable({ sessionId, globalFilters }: { sessionId: string, globalFilters: any[] }) {
   const [page, setPage] = useState(0);
@@ -14,7 +15,7 @@ export default function DataTable({ sessionId, globalFilters }: { sessionId: str
   const limit = 50;
 
   const handleExport = (format: 'csv' | 'excel') => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const baseUrl = api.defaults.baseURL;
     const url = new URL(`${baseUrl}/sessions/${sessionId}/export/data`);
     url.searchParams.append('format', format);
     window.open(url.toString(), '_blank');

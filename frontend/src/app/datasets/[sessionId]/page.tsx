@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useDatasetProfile, useColumnSummaries, useSession } from "@/hooks/useSessions";
 import { useDashboardSummary, useSavedCharts, useSaveCharts } from "@/hooks/useAnalytics";
 import Navbar from "@/components/layout/Navbar";
+import api from "@/lib/api";
 
 // Profiler Components
 import DatasetSummaryCard from "@/components/profiler/DatasetSummaryCard";
@@ -96,7 +97,7 @@ export default function DatasetWorkspacePage() {
     saveCharts(newCharts);
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const baseUrl = api.defaults.baseURL;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">

@@ -113,7 +113,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
   };
 
   const handleExport = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const baseUrl = api.defaults.baseURL;
     window.open(`${baseUrl}/sessions/${sessionId}/export/report`, '_blank');
   };
 

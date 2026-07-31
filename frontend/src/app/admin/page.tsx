@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import { Activity, Server, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -15,8 +15,8 @@ export default function AdminDashboardPage() {
     const fetchData = async () => {
       try {
         const [analyticsRes, statusRes] = await Promise.all([
-          axios.get("http://localhost:8000/api/v1/admin/analytics"),
-          axios.get("http://localhost:8000/api/v1/admin/status")
+          api.get("/api/v1/admin/analytics"),
+          api.get("/api/v1/admin/status")
         ]);
         setAnalytics(analyticsRes.data);
         setStatus(statusRes.data);

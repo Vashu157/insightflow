@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import api from "@/lib/api";
 
 export default function ChatResults({ message, sessionId }: { message: any, sessionId: string }) {
   const [showSql, setShowSql] = useState(false);
@@ -14,7 +15,7 @@ export default function ChatResults({ message, sessionId }: { message: any, sess
 
   const handleExport = async () => {
     if (!message.sql_query) return;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const baseUrl = api.defaults.baseURL;
     // Use fetch to POST the SQL query and receive a file download
     try {
       const res = await fetch(`${baseUrl}/sessions/${sessionId}/export/query`, {
