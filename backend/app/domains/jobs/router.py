@@ -6,6 +6,7 @@ from app.domains.shared.models import Job, Session as SessionModel
 from app.domains.jobs.schemas import JobStatusResponse, JobCreateResponse
 from app.domains.jobs.events import EventSchema
 from app.domains.jobs.producer import producer_client
+from app.domains.jobs.inprocess import schedule_fallback
 
 router = APIRouter()
 
@@ -67,7 +68,11 @@ async def start_profiling_job(session_id: str, db: Session = Depends(get_db)):
         event_type="dataset.uploaded"
     )
     await producer_client.publish("dataset.uploaded", event)
-    
+
+    # Guarantee execution even if Kafka publish/round-trip fails on free tier.
+    # No-ops if a Kafka worker claims the job first.
+    schedule_fallback(job_id_str, session_id, "PROFILING")
+
     return JobCreateResponse(job_id=job_id_str, status="QUEUED")
 
 @router.post("/report/{session_id}", response_model=JobCreateResponse)
@@ -88,5 +93,9 @@ async def start_report_job(session_id: str, db: Session = Depends(get_db)):
         event_type="report.requested"
     )
     await producer_client.publish("report.requested", event)
-    
+
+    # Guarantee execution even if Kafka publish/round-trip fails on free tier.
+    # No-ops if a Kafka worker claims the job first.
+    schedule_fallback(job_id_str, session_id, "REPORT_GENERATION")
+
     return JobCreateResponse(job_id=job_id_str, status="QUEUED")

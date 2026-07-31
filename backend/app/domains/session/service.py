@@ -28,18 +28,29 @@ class SessionServiceImpl(ISessionService):
         
         try:
             file_path = self.storage.save(session_id, file)
-            
+
+            # Memory-conscious metadata extraction. Loading a large CSV fully into
+            # a DataFrame here can exhaust a small (e.g. 512MB) instance and kill
+            # the process mid-request (ERR_CONNECTION_CLOSED). For CSV we read only
+            # a small sample for the schema and a single column for the row count.
             if file.filename.endswith('.csv'):
-                df = pd.read_csv(file_path)
+                sample_df = pd.read_csv(file_path, nrows=200)
+                column_count = len(sample_df.columns)
+                schema_snapshot = {col: str(dtype) for col, dtype in sample_df.dtypes.items()}
+                try:
+                    row_count = int(len(pd.read_csv(file_path, usecols=[0])))
+                except Exception:
+                    row_count = int(len(sample_df))
             else:
                 df = pd.read_excel(file_path)
-                
-            if df.empty:
+                column_count = len(df.columns)
+                schema_snapshot = {col: str(dtype) for col, dtype in df.dtypes.items()}
+                row_count = int(len(df))
+
+            if column_count == 0 or row_count == 0:
                 self.storage.delete(session_id)
                 raise HTTPException(status_code=400, detail="The uploaded file is empty.")
-                
-            row_count = len(df)
-            column_count = len(df.columns)
+
             file_size = os.path.getsize(file_path)
             
             expires_at = datetime.utcnow() + timedelta(minutes=settings.SESSION_EXPIRY_MINUTES)
@@ -67,7 +78,7 @@ class SessionServiceImpl(ISessionService):
                 change_summary="Initial upload",
                 file_path=file.filename,
                 row_count=row_count,
-                schema_snapshot={col: str(dtype) for col, dtype in df.dtypes.items()}
+                schema_snapshot=schema_snapshot
             )
             db.add(v1)
             db.commit()

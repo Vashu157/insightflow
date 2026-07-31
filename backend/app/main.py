@@ -37,33 +37,44 @@ import os
 
 
 async def consume_job_updates():
-    """Background task to consume job.updates and broadcast to WebSockets."""
-    group_id = f"insightflow-ws-gateway-{uuid.uuid4()}"
-    kafka_config = get_kafka_config()
-    consumer = AIOKafkaConsumer(
-        "job.updates",
-        group_id=group_id,
-        auto_offset_reset="latest",
-        value_deserializer=lambda v: json.loads(v.decode('utf-8')),
-        **kafka_config
-    )
-    try:
-        await consumer.start()
+    """Consume job.updates and broadcast to WebSockets.
 
-        logger.info(f"WebSocket Gateway Kafka Consumer started on topic 'job.updates' (Group: {group_id})")
-        async for msg in consumer:
-            event = msg.value
-            session_id = event.get("session_id")
-            if session_id:
-                await manager.broadcast_to_session(session_id, event)
-    except asyncio.CancelledError:
-        pass
-    except Exception as e:
-        import os
-        logger.error(f"WebSocket Gateway Kafka Consumer failed: {e}. Exiting application.")
-        os._exit(1)
-    finally:
-        await consumer.stop()
+    Resilient to Kafka connection drops (common on free-tier Aiven, which resets
+    idle connections): reconnects with backoff instead of killing the process.
+    A transient Kafka error must NEVER take down the API — doing so drops
+    in-flight requests (e.g. uploads) as ERR_CONNECTION_CLOSED.
+    """
+    backoff = 1
+    while True:
+        group_id = f"insightflow-ws-gateway-{uuid.uuid4()}"
+        consumer = AIOKafkaConsumer(
+            "job.updates",
+            group_id=group_id,
+            auto_offset_reset="latest",
+            value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+            **get_kafka_config()
+        )
+        try:
+            await consumer.start()
+            logger.info(f"WebSocket Gateway Kafka Consumer started on topic 'job.updates' (Group: {group_id})")
+            backoff = 1  # reset after a successful connection
+            async for msg in consumer:
+                event = msg.value
+                session_id = event.get("session_id")
+                if session_id:
+                    await manager.broadcast_to_session(session_id, event)
+        except asyncio.CancelledError:
+            logger.info("WebSocket Gateway Kafka Consumer cancelled.")
+            break
+        except Exception as e:
+            logger.error(f"WebSocket Gateway Kafka Consumer error: {e}. Reconnecting in {backoff}s.")
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 30)
+        finally:
+            try:
+                await consumer.stop()
+            except Exception:
+                pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -72,11 +83,14 @@ async def lifespan(app: FastAPI):
     await producer_client.start()
     ws_consumer_task = asyncio.create_task(consume_job_updates())
 
-    # Run the Kafka job worker inside this process when there is no dedicated
-    # worker deployment (default on single-service PaaS like Render/Railway/Fly).
+    # Optional always-on embedded Kafka worker. Default OFF: on free tiers (512MB)
+    # it holds extra Kafka SSL connections and adds memory pressure, and the
+    # per-job in-process fallback (see jobs/inprocess.py) already guarantees
+    # execution. Enable only if you want Kafka to be the primary execution path
+    # inside the web process. A separate `python -m app.worker` service still works.
     embedded_worker = None
     embedded_worker_task = None
-    if os.getenv("RUN_WORKER_IN_PROCESS", "true").lower() in ("1", "true", "yes"):
+    if os.getenv("RUN_WORKER_IN_PROCESS", "false").lower() in ("1", "true", "yes"):
         embedded_worker = KafkaWorker()
         embedded_worker_task = asyncio.create_task(embedded_worker.run_embedded())
         logger.info("Embedded Kafka job worker started (RUN_WORKER_IN_PROCESS=true).")

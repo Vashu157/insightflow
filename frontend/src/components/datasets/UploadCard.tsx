@@ -44,12 +44,14 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
         return;
       }
 
-      // Simulate progress for UI purposes before the mutation finishes
+      // Simulate progress for the upload phase only (0 -> 60%). Real backend
+      // processing progress (which reports up to 100%) takes over after upload,
+      // so we cap the fake ticker below it to keep the bar strictly increasing.
       setProgress(10);
       setCurrentStage("Uploading");
       if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
       fakeProgressIntervalRef.current = setInterval(() => {
-        setProgress((p) => (p >= 90 ? 90 : p + 10));
+        setProgress((p) => (p >= 60 ? 60 : p + 8));
       }, 200);
 
       uploadDataset.mutate(file, {
@@ -60,7 +62,8 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
             clearInterval(fakeProgressIntervalRef.current);
             fakeProgressIntervalRef.current = null;
           }
-          setProgress(95); // brief hop into the "queued" band; real updates take over from here
+          // Do not jump the bar here; leave it where the upload phase left it and
+          // let the monotonic real-progress updates carry it forward from there.
           setCurrentStage("Queued");
           setActiveSessionId(data.id);
           try {
