@@ -31,7 +31,9 @@ from app.domains.admin.router import admin_router
 
 from app.domains.jobs.producer import producer_client
 from app.domains.shared.websocket import manager
+from app.worker import KafkaWorker
 from aiokafka import AIOKafkaConsumer
+import os
 
 
 async def consume_job_updates():
@@ -70,11 +72,27 @@ async def lifespan(app: FastAPI):
     await producer_client.start()
     ws_consumer_task = asyncio.create_task(consume_job_updates())
 
+    # Run the Kafka job worker inside this process when there is no dedicated
+    # worker deployment (default on single-service PaaS like Render/Railway/Fly).
+    embedded_worker = None
+    embedded_worker_task = None
+    if os.getenv("RUN_WORKER_IN_PROCESS", "true").lower() in ("1", "true", "yes"):
+        embedded_worker = KafkaWorker()
+        embedded_worker_task = asyncio.create_task(embedded_worker.run_embedded())
+        logger.info("Embedded Kafka job worker started (RUN_WORKER_IN_PROCESS=true).")
+
     yield
 
     logger.info("Application shutting down...", extra={"extra_info": {"event": "shutdown"}})
     cleanup_task.cancel()
     ws_consumer_task.cancel()
+    if embedded_worker is not None:
+        embedded_worker.shutdown_event.set()
+        if embedded_worker_task is not None:
+            try:
+                await asyncio.wait_for(embedded_worker_task, timeout=10)
+            except asyncio.TimeoutError:
+                embedded_worker_task.cancel()
     await producer_client.stop()
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)

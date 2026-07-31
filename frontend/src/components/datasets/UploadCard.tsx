@@ -54,47 +54,61 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
 
       uploadDataset.mutate(file, {
         onSuccess: async (data) => {
-          // File is uploaded. Now start the profiling job.
+          // Upload complete — stop the fake pre-upload progress ticker so it
+          // stops fighting the real backend progress reported over WS/polling.
+          if (fakeProgressIntervalRef.current) {
+            clearInterval(fakeProgressIntervalRef.current);
+            fakeProgressIntervalRef.current = null;
+          }
+          setProgress(95); // brief hop into the "queued" band; real updates take over from here
           setCurrentStage("Queued");
           setActiveSessionId(data.id);
           try {
             const res = await api.post(`/jobs/profile/${data.id}`);
             const jobId = res.data.job_id;
-            
+
             // Fallback polling in case WebSocket connection is too slow
             pollIntervalRef.current = setInterval(async () => {
               try {
                 const jobRes = await api.get(`/jobs/${jobId}`);
                 if (jobRes.data.status === "COMPLETED") {
                   if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-                  if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
                   setProgress(100);
                   setIsCompleted(true);
                   toast.success("Dataset processed successfully!");
                   setTimeout(() => onUploadSuccess(data.id), 500);
                 } else if (jobRes.data.status === "FAILED") {
                   if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-                  if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
                   toast.error(`Processing failed: ${jobRes.data.error_message || "Unknown error"}`);
                   setProgress(0);
                 } else {
-                  if (jobRes.data.progress !== undefined && jobRes.data.progress !== null) {
-                    setProgress(jobRes.data.progress);
+                  // Only advance progress; never regress. Backend reports 0 while
+                  // QUEUED, which would otherwise reset the bar and cause it to
+                  // oscillate against the fake ticker (now removed above).
+                  const reported = jobRes.data.progress;
+                  if (typeof reported === "number") {
+                    setProgress((prev) => (reported > prev ? reported : prev));
+                  }
+                  if (jobRes.data.status) {
+                    setCurrentStage(jobRes.data.status === "RUNNING" ? "Processing" : "Queued");
                   }
                 }
               } catch (e) {
                 console.error("Failed to poll job status:", e);
               }
-            }, 1000);
-            
+            }, 1500);
+
           } catch (err) {
-             if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
              toast.error("Failed to start profiling job.");
              setProgress(0);
+             setActiveSessionId(null);
           }
         },
         onError: (err: any) => {
-          if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);
+          if (fakeProgressIntervalRef.current) {
+            clearInterval(fakeProgressIntervalRef.current);
+            fakeProgressIntervalRef.current = null;
+          }
           setProgress(0);
           toast.error(err.response?.data?.detail || "Failed to upload dataset.");
         },
@@ -106,13 +120,15 @@ export default function UploadCard({ onUploadSuccess }: { onUploadSuccess: (id: 
   // Listen to WebSocket updates
   useEffect(() => {
     if (jobStatus?.payload) {
-      if (jobStatus.payload.progress !== undefined) {
-        setProgress(jobStatus.payload.progress);
+      const reported = jobStatus.payload.progress;
+      if (typeof reported === "number") {
+        // Never let a stale/late event push the bar backwards.
+        setProgress((prev) => (reported > prev ? reported : prev));
       }
       if (jobStatus.payload.current_stage) {
         setCurrentStage(jobStatus.payload.current_stage);
       }
-      
+
       if (jobStatus.payload.status === "COMPLETED") {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         if (fakeProgressIntervalRef.current) clearInterval(fakeProgressIntervalRef.current);

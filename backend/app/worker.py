@@ -67,12 +67,17 @@ class KafkaWorker:
         logger.info("Shutdown signal received. Finishing in-flight jobs...")
         self.shutdown_event.set()
 
-    async def run(self):
+    async def run(self, install_signal_handlers: bool = True):
         await self.setup()
 
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, self.handle_signal)
+        if install_signal_handlers:
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                try:
+                    loop.add_signal_handler(sig, self.handle_signal)
+                except (NotImplementedError, RuntimeError):
+                    # Signal handlers unsupported on this platform / non-main thread.
+                    pass
 
         try:
             while not self.shutdown_event.is_set():
@@ -82,10 +87,16 @@ class KafkaWorker:
                         await self.process_message(msg)
                         if self.shutdown_event.is_set():
                             break
+        except asyncio.CancelledError:
+            logger.info("Worker task cancelled.")
         except Exception as e:
             logger.error(f"Worker encountered a fatal error: {e}", exc_info=True)
         finally:
             await self.teardown()
+
+    async def run_embedded(self):
+        """Run without installing OS signal handlers; use when embedded in another asyncio app."""
+        await self.run(install_signal_handlers=False)
 
     async def publish_event(self, topic: str, original_event: EventSchema, **kwargs):
         new_event = EventSchema(
