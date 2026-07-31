@@ -19,6 +19,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStage, setCurrentStage] = useState<string>("Started");
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   
   const { jobStatus } = useJobWebSocket(sessionId);
 
@@ -29,6 +30,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
         const res = await api.get(`/jobs/session/${sessionId}/active`);
         if (res.data && res.data.job_type === "REPORT_GENERATION") {
           setIsRefreshing(true);
+          setActiveJobId(res.data.job_id);
           setProgress(res.data.progress || 0);
           setCurrentStage(res.data.status === "QUEUED" ? "Queued" : "Running");
         }
@@ -41,7 +43,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
 
   // Listen to WebSocket updates
   useEffect(() => {
-    if (jobStatus?.payload && jobStatus.event_type.startsWith("report.")) {
+    if (jobStatus?.payload && activeJobId && jobStatus.job_id === activeJobId) {
       if (jobStatus.payload.status === "RUNNING") {
         setIsRefreshing(true);
       }
@@ -55,13 +57,46 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
       if (jobStatus.payload.status === "COMPLETED") {
         queryClient.invalidateQueries({ queryKey: ["insights", sessionId] });
         setIsRefreshing(false);
+        setActiveJobId(null);
         toast.success("Business report generated successfully!");
       } else if (jobStatus.payload.status === "FAILED") {
         toast.error(`Processing failed: ${jobStatus.payload.error_message}`);
         setIsRefreshing(false);
+        setActiveJobId(null);
       }
     }
-  }, [jobStatus, sessionId, queryClient]);
+  }, [jobStatus, sessionId, queryClient, activeJobId]);
+
+  // REST polling fallback
+  useEffect(() => {
+    if (!isRefreshing || !activeJobId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/jobs/${activeJobId}`);
+        const data = res.data;
+        
+        if (data.progress !== undefined) setProgress(data.progress);
+        if (data.status === "QUEUED") setCurrentStage("Queued");
+        if (data.status === "RUNNING") setCurrentStage("Running");
+        
+        if (data.status === "COMPLETED") {
+          queryClient.invalidateQueries({ queryKey: ["insights", sessionId] });
+          setIsRefreshing(false);
+          setActiveJobId(null);
+          toast.success("Business report generated successfully!");
+        } else if (data.status === "FAILED") {
+          toast.error(`Processing failed: ${data.error_message || "Unknown error"}`);
+          setIsRefreshing(false);
+          setActiveJobId(null);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isRefreshing, activeJobId, sessionId, queryClient]);
 
   const handleShare = async () => {
     setIsSharing(true);
@@ -87,6 +122,11 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
     setProgress(0);
     setCurrentStage("Queued");
     refresh(undefined, {
+      onSuccess: (data) => {
+        if (data && data.job_id) {
+          setActiveJobId(data.job_id);
+        }
+      },
       onError: () => {
         setIsRefreshing(false);
         toast.error("Failed to queue report generation.");
