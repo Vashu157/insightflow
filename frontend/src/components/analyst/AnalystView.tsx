@@ -33,7 +33,7 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
           setCurrentStage(res.data.status === "QUEUED" ? "Queued" : "Running");
         }
       } catch (err) {
-        // No active job found, do nothing
+        // No active job found
       }
     };
     checkActiveJob();
@@ -62,6 +62,10 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
       }
     }
   }, [jobStatus, sessionId, queryClient]);
+
+  const handleShare = async () => {
+    setIsSharing(true);
+    try {
       const response = await api.post(`/sessions/${sessionId}/share`);
       const shareUrl = `${window.location.origin}/share/${response.data.share_token}`;
       await navigator.clipboard.writeText(shareUrl);

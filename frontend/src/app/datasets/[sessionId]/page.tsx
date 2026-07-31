@@ -262,7 +262,7 @@ export default function DatasetWorkspacePage() {
           </TabsContent>
 
           {/* Business Analyst Tab */}
-          <TabsContent value="analyst" className="animate-in fade-in duration-300">
+          <TabsContent value="analyst" keepMounted className="animate-in fade-in duration-300 data-[state=inactive]:hidden">
             <AnalystView sessionId={sessionId} />
           </TabsContent>
 
