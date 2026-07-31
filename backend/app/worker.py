@@ -173,12 +173,12 @@ class KafkaWorker:
                 if topic == "dataset.uploaded":
                     profiling_service = get_profiling_service()
                     await JobExecutor.execute(profiling_service.generate_profile, db, event.session_id, progress_callback=update_progress)
-                    await self.publish_event("dataset.profiled", event)
+                    # Removed publish to "dataset.profiled" to save Aiven topic limits
 
                 elif topic == "report.requested":
                     report_service = get_report_service()
                     await JobExecutor.execute(report_service.generate_report, db, event.session_id, force_refresh=True, progress_callback=update_progress)
-                    await self.publish_event("report.completed", event)
+                    # Removed publish to "report.completed" to save Aiven topic limits
 
                 duration = time.time() - job_start_time
                 JOB_DURATION_SECONDS.labels(job_type=job_type, status="success").observe(duration)

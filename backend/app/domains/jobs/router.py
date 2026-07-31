@@ -27,6 +27,28 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
         error_message=job.error_message
     )
 
+@router.get("/session/{session_id}/active", response_model=JobStatusResponse)
+def get_active_job_for_session(session_id: str, db: Session = Depends(get_db)):
+    """Retrieve the currently active (QUEUED or RUNNING) job for a session."""
+    job = db.query(Job).filter(
+        Job.session_id == session_id,
+        Job.status.in_(["QUEUED", "RUNNING"])
+    ).order_by(Job.created_at.desc()).first()
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="No active jobs found for this session")
+    
+    return JobStatusResponse(
+        job_id=str(job.id),
+        session_id=str(job.session_id),
+        job_type=job.job_type,
+        status=job.status,
+        progress=job.progress,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        error_message=job.error_message
+    )
+
 @router.post("/profile/{session_id}", response_model=JobCreateResponse)
 async def start_profiling_job(session_id: str, db: Session = Depends(get_db)):
     """Triggers an asynchronous profiling job via Kafka."""

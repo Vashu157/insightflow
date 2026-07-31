@@ -7,6 +7,7 @@ import InsightCard from "./InsightCard";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
+
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -21,9 +22,29 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
   
   const { jobStatus } = useJobWebSocket(sessionId);
 
+  // Check for active job on mount
+  useEffect(() => {
+    const checkActiveJob = async () => {
+      try {
+        const res = await api.get(`/jobs/session/${sessionId}/active`);
+        if (res.data && res.data.job_type === "REPORT_GENERATION") {
+          setIsRefreshing(true);
+          setProgress(res.data.progress || 0);
+          setCurrentStage(res.data.status === "QUEUED" ? "Queued" : "Running");
+        }
+      } catch (err) {
+        // No active job found, do nothing
+      }
+    };
+    checkActiveJob();
+  }, [sessionId]);
+
   // Listen to WebSocket updates
   useEffect(() => {
     if (jobStatus?.payload && jobStatus.event_type.startsWith("report.")) {
+      if (jobStatus.payload.status === "RUNNING") {
+        setIsRefreshing(true);
+      }
       if (jobStatus.payload.progress !== undefined) {
         setProgress(jobStatus.payload.progress);
       }
@@ -41,10 +62,6 @@ export default function AnalystView({ sessionId }: { sessionId: string }) {
       }
     }
   }, [jobStatus, sessionId, queryClient]);
-
-  const handleShare = async () => {
-    setIsSharing(true);
-    try {
       const response = await api.post(`/sessions/${sessionId}/share`);
       const shareUrl = `${window.location.origin}/share/${response.data.share_token}`;
       await navigator.clipboard.writeText(shareUrl);
